@@ -22,13 +22,27 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  val keystorePropertiesFile = rootProject.file("local.properties")
+  val keystoreProperties = java.util.Properties()
+  if (keystorePropertiesFile.exists()) {
+      keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+  }
 
+  signingConfigs {
+    create("release") {
+      storeFile = rootProject.file("sparrow-release-key.jks")
+      storePassword = keystoreProperties.getProperty("STORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
+      keyAlias = "sparrow_alias"
+      keyPassword = keystoreProperties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
+    }
+  }
 
   buildTypes {
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      signingConfig = signingConfigs.getByName("release")
     }
     debug { }
   }
