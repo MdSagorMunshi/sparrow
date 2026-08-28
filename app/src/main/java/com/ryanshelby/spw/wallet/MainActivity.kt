@@ -75,6 +75,8 @@ import com.ryanshelby.spw.wallet.ui.screens.PinLockScreen
 import com.ryanshelby.spw.wallet.ui.screens.ReceiveScreen
 import com.ryanshelby.spw.wallet.ui.screens.SendTransferScreen
 import com.ryanshelby.spw.wallet.ui.screens.SettingsSecurityScreen
+import com.ryanshelby.spw.wallet.ui.screens.MiningScreen
+import com.ryanshelby.spw.wallet.ui.components.NotificationPermissionHandler
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBackground
@@ -151,6 +153,7 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                 ) { innerPadding ->
+                    NotificationPermissionHandler()
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -303,6 +306,9 @@ class MainActivity : FragmentActivity() {
                                     onNavigateToHistory = {
                                         navController.navigate("history")
                                     },
+                                    onNavigateToMining = {
+                                        navController.navigate("mining")
+                                    },
                                     onRefresh = {
                                         scope.launch {
                                             repository.refreshOnChainData()
@@ -396,6 +402,13 @@ class MainActivity : FragmentActivity() {
                                     transactions = transactions,
                                     activeLanguage = activeLanguage,
                                     network = activeNetwork,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable("mining") {
+                                MiningScreen(
+                                    walletAddress = securityManager.getWalletAddress(),
                                     onBack = { navController.popBackStack() }
                                 )
                             }

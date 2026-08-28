@@ -313,6 +313,8 @@ class WalletRepository(
         if (explorerResult.isSuccess) {
             val exp = explorerResult.getOrNull()
             if (exp != null && exp.transactions.isNotEmpty()) {
+                val existingTxHashes = walletDao.getAllTransactionsSync().map { it.txHash }.toSet()
+
                 val dbTxs = exp.transactions.map { tx ->
                     val isIncoming = tx.outputs.any { it.address == address }
                     val outputForMe = tx.outputs.firstOrNull { it.address == address }
@@ -346,6 +348,16 @@ class WalletRepository(
                     )
                 }
                 walletDao.insertTransactions(dbTxs)
+                
+                dbTxs.forEach { tx ->
+                    if (!existingTxHashes.contains(tx.txHash) && tx.toAddress == address && tx.fromAddress != address) {
+                        notificationService.showIncomingTransferNotification(
+                            amount = tx.amountSpw,
+                            symbol = tx.tokenSymbol,
+                            fromAddress = tx.fromAddress
+                        )
+                    }
+                }
             }
         }
 

@@ -94,6 +94,7 @@ fun DashboardScreen(
     onNavigateToSendWithRecipient: (token: String?, recipient: String?) -> Unit = { t, _ -> onNavigateToSend(t) },
     onNavigateToReceive: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToMining: () -> Unit,
     onRefresh: () -> Unit = {},
     onCopyAddress: (String) -> Unit
 ) {
@@ -188,6 +189,16 @@ fun DashboardScreen(
                     onClick = {
                         HapticUtil.lightTap(context)
                         onNavigateToHistory()
+                    }
+                )
+
+                QuickActionButton(
+                    icon = Icons.Default.Security,
+                    label = "Mining",
+                    accentColor = CyanNeon,
+                    onClick = {
+                        HapticUtil.lightTap(context)
+                        onNavigateToMining()
                     }
                 )
             }
