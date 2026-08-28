@@ -38,6 +38,7 @@ import com.ryanshelby.spw.wallet.data.local.AppDataStore
 import com.ryanshelby.spw.wallet.security.SecureKeyStorage
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+import kotlinx.coroutines.sync.Mutex
 
 class WalletRepository(
     private val context: Context,
@@ -64,6 +65,8 @@ class WalletRepository(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val refreshMutex = Mutex()
 
     val accountsFlow: Flow<List<AccountEntity>> = walletDao.getAllAccounts()
 
@@ -284,8 +287,10 @@ class WalletRepository(
     }
 
     suspend fun refreshOnChainData() {
-        _isRefreshing.value = true
-        val address = securityManager.getWalletAddress()
+        if (!refreshMutex.tryLock()) return
+        try {
+            _isRefreshing.value = true
+            val address = securityManager.getWalletAddress()
         if (address.isEmpty() || !SPWCrypto.isValidSpwAddress(address)) {
             _isRefreshing.value = false
             return
@@ -361,13 +366,16 @@ class WalletRepository(
             }
         }
 
-        _isRefreshing.value = false
+        } finally {
+            _isRefreshing.value = false
+            refreshMutex.unlock()
+        }
     }
 
     private fun startPeriodicSync() {
         repositoryScope.launch {
             while (true) {
-                delay(30000) // Poll blockchain every 30s
+                delay(2000) // Poll blockchain every 2s
                 refreshOnChainData()
             }
         }
@@ -539,6 +547,13 @@ class WalletRepository(
             nonce = finalTxHash.take(8).toLongOrNull(16) ?: 0L
         )
         walletDao.insertTransaction(txEntity)
+
+        val currentToken = walletDao.getNativeTokenSync()
+        if (currentToken != null) {
+            val newFeathers = currentToken.feathers - neededFeathers
+            val newSpw = newFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
+            walletDao.updateNativeBalance(newSpw, newFeathers)
+        }
 
         // Trigger notification
         notificationService.showOutgoingTransferNotification(

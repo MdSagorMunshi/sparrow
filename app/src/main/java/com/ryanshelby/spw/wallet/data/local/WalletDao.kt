@@ -60,6 +60,9 @@ interface WalletDao {
     @Query("SELECT * FROM tokens WHERE symbol = 'SPW' LIMIT 1")
     fun getNativeToken(): Flow<TokenEntity?>
 
+    @Query("SELECT * FROM tokens WHERE symbol = 'SPW' LIMIT 1")
+    suspend fun getNativeTokenSync(): TokenEntity?
+
     @Query("SELECT * FROM tokens")
     fun getAllTokens(): Flow<List<TokenEntity>>
 
