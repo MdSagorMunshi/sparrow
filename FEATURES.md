@@ -13,4 +13,5 @@
 - Biometric security (Fingerprint / Face Unlock) with PIN fallback.
 - Duress protocol with Decoy Wallet PIN configuration.
 - Real-Time RPC node synchronization.
-- Air-Gapped cold storage QR vaults for offline interactions.
+- Encrypted local keystore security.
+- Comprehensive setting & UI theme engine.

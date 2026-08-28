@@ -8,7 +8,7 @@
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin&logoColor=white)](#)
 [![SPW](https://img.shields.io/badge/Network-Sparrow%20(SPW)-orange)](#)
 
-*A production-grade, privacy-first crypto wallet featuring dual ECDSA/ECDH stealth address transfers, air-gapped cold storage QR vaults, real-time RPC node synchronization, and local hardware-backed encryption.*
+*A production-grade, privacy-first crypto wallet featuring dual ECDSA/ECDH stealth address transfers, real-time RPC node synchronization, and local hardware-backed encryption.*
 
 **Official Links:** [SPW Network](https://spw.network/) | [SPW Web Wallet](https://wallet.spw.network/)
 
