@@ -97,12 +97,10 @@ fun GlowingQrCodeView(
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Inner white background for perfect QR contrast
+        // Inner container for QR padding
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.White)
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -128,11 +126,12 @@ fun GlowingQrCodeView(
                         if (dx * dx + dy * dy < badgeRadius * badgeRadius) continue
 
                         if (matrix[r][c]) {
-                            val topLeft = Offset(c * cellSize, r * cellSize)
-                            drawRect(
-                                color = DarkBackground,
+                            val topLeft = Offset(c * cellSize + 0.5f, r * cellSize + 0.5f)
+                            drawRoundRect(
+                                color = Color.White,
                                 topLeft = topLeft,
-                                size = Size(cellSize + 0.5f, cellSize + 0.5f) // Add slight overlap to prevent antialiasing gaps
+                                size = Size(cellSize - 1f, cellSize - 1f), // Add gap between dots
+                                cornerRadius = CornerRadius(3f, 3f)
                             )
                         }
                     }
