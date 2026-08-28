@@ -10,6 +10,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.*
+import androidx.compose.animation.animateColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,6 +37,8 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.CallReceived
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -528,19 +532,21 @@ private fun CyberBottomNavigationBar(
                     icon = Icons.AutoMirrored.Filled.Send,
                     label = "Send",
                     isSelected = currentRoute.startsWith("send"),
+                    isGlowing = true,
                     onClick = { onNavigate("send") }
                 )
                 NavItem(
-                    icon = Icons.Default.QrCode,
+                    icon = Icons.AutoMirrored.Filled.CallReceived,
                     label = "Receive",
                     isSelected = currentRoute == "receive",
                     onClick = { onNavigate("receive") }
                 )
                 NavItem(
-                    icon = Icons.Default.Lock,
-                    label = "Air-Gap",
-                    isSelected = currentRoute == "cold_vault",
-                    onClick = { onNavigate("cold_vault") }
+                    icon = Icons.Default.Build,
+                    label = "Mining",
+                    isSelected = currentRoute == "mining",
+                    isHighlighted = true,
+                    onClick = { onNavigate("mining") }
                 )
                 NavItem(
                     icon = Icons.Default.History,
@@ -564,8 +570,22 @@ private fun NavItem(
     icon: ImageVector,
     label: String,
     isSelected: Boolean,
+    isHighlighted: Boolean = false,
+    isGlowing: Boolean = false,
     onClick: () -> Unit
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "glow")
+    val animatedColor by infiniteTransition.animateColor(
+        initialValue = CyanNeon,
+        targetValue = Color(0xFF00FFCC),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowColor"
+    )
+    val activeColor = if (isGlowing) animatedColor else CyanNeon
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -574,25 +594,29 @@ private fun NavItem(
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
+        val boxSize = if (isHighlighted) 36.dp else 30.dp
+        val iconSize = if (isHighlighted) 22.dp else 18.dp
+
         Box(
             modifier = Modifier
-                .size(30.dp)
+                .size(boxSize)
                 .clip(CircleShape)
-                .background(if (isSelected) CyanNeon.copy(alpha = 0.18f) else Color.Transparent),
+                .background(if (isSelected) activeColor.copy(alpha = 0.18f) else Color.Transparent)
+                .then(if (isGlowing) Modifier.shadow(8.dp, CircleShape, spotColor = activeColor) else Modifier),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (isSelected) CyanNeon else TextSecondary,
-                modifier = Modifier.size(18.dp)
+                tint = if (isSelected || isGlowing || isHighlighted) activeColor else TextSecondary,
+                modifier = Modifier.size(iconSize)
             )
         }
         Text(
             text = label,
-            color = if (isSelected) CyanNeon else TextMuted,
-            fontSize = 9.5.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            color = if (isSelected || isGlowing || isHighlighted) activeColor else TextMuted,
+            fontSize = if (isHighlighted) 10.sp else 9.5.sp,
+            fontWeight = if (isSelected || isHighlighted || isGlowing) FontWeight.Bold else FontWeight.Medium
         )
     }
 }
