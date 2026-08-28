@@ -1,0 +1,84 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer Hexagon Cyber Shield Frame -->
+    <path
+        android:pathData="M54,22 L78,36 L78,72 L54,86 L30,72 L30,36 Z"
+        android:strokeWidth="2.5">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="30"
+                android:startY="22"
+                android:endX="78"
+                android:endY="86"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00E5FF" />
+                <item android:offset="0.5" android:color="#7C4DFF" />
+                <item android:offset="1.0" android:color="#00E5FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Sparrow Left Wing -->
+    <path
+        android:pathData="M54,42 L34,48 L40,64 L54,58 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="42"
+                android:endX="54"
+                android:endY="64"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#00B0FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Sparrow Right Wing -->
+    <path
+        android:pathData="M54,42 L74,48 L68,64 L54,58 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="42"
+                android:endX="74"
+                android:endY="64"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#7C4DFF" />
+                <item android:offset="1.0" android:color="#651FFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Sparrow Head & Beak -->
+    <path
+        android:pathData="M54,32 L60,42 L48,42 Z"
+        android:fillColor="#00E5FF" />
+
+    <!-- Center Crypto Diamond Core -->
+    <path
+        android:pathData="M54,50 L62,58 L54,74 L46,58 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="46"
+                android:startY="50"
+                android:endX="62"
+                android:endY="74"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FFFFFF" />
+                <item android:offset="0.4" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#7C4DFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Node Glow Point -->
+    <path
+        android:pathData="M54,58m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
+        android:fillColor="#FFFFFF" />
+</vector>
