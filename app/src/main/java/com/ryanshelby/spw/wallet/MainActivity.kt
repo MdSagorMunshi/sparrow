@@ -54,6 +54,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import com.ryanshelby.spw.wallet.R
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -542,7 +544,7 @@ private fun CyberBottomNavigationBar(
                     onClick = { onNavigate("receive") }
                 )
                 NavItem(
-                    icon = Icons.Default.Build,
+                    icon = ImageVector.vectorResource(id = R.drawable.ic_hammer),
                     label = "Mining",
                     isSelected = currentRoute == "mining",
                     isHighlighted = true,
