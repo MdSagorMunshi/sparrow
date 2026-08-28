@@ -9,8 +9,10 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.ryanshelby.spw.wallet.MainActivity
+import com.ryanshelby.spw.wallet.data.local.NotificationPreferences
 
 class PushNotificationService(private val context: Context) {
+    private val prefs = NotificationPreferences(context)
 
     companion object {
         const val CHANNEL_ID_TRANSFERS = "spw_wallet_transfers"
@@ -55,6 +57,8 @@ class PushNotificationService(private val context: Context) {
         symbol: String,
         fromAddress: String
     ) {
+        if (!prefs.incomingTransactionsEnabled) return
+
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -94,6 +98,8 @@ class PushNotificationService(private val context: Context) {
         toAddress: String,
         txHash: String
     ) {
+        if (!prefs.outgoingTransactionsEnabled) return
+
         val shortAddr = if (toAddress.length > 12) {
             "${toAddress.take(6)}...${toAddress.takeLast(4)}"
         } else toAddress

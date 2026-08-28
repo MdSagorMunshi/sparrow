@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -88,6 +89,7 @@ import com.ryanshelby.spw.wallet.data.model.NetworkConfig
 import com.ryanshelby.spw.wallet.data.model.TranslationHelper
 import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.security.KeyStoreTestResult
+import com.ryanshelby.spw.wallet.data.local.NotificationPreferences
 import com.ryanshelby.spw.wallet.security.KeystoreDiagnosticReport
 import com.ryanshelby.spw.wallet.security.SecureKeyStorage
 import com.ryanshelby.spw.wallet.security.SecurityManager
@@ -148,6 +150,7 @@ fun SettingsSecurityScreen(
     var showLanguageModal by remember { mutableStateOf(false) }
     var showNetworkModal by remember { mutableStateOf(false) }
     var showAddContactModal by remember { mutableStateOf(false) }
+    var showNotificationsModal by remember { mutableStateOf(false) }
     var showDecoyModal by remember { mutableStateOf(false) }
     var showDebugDiagnosticsModal by remember { mutableStateOf(false) }
     var showClearWalletDialog by remember { mutableStateOf(false) }
@@ -167,6 +170,11 @@ fun SettingsSecurityScreen(
     // Keystore Diagnostic Test State
     var isTestingKeystore by remember { mutableStateOf(false) }
     var keystoreTestResult by remember { mutableStateOf<KeyStoreTestResult?>(null) }
+    
+    val notificationPrefs = remember { NotificationPreferences(context) }
+    var incTxEnabled by remember { mutableStateOf(notificationPrefs.incomingTransactionsEnabled) }
+    var outTxEnabled by remember { mutableStateOf(notificationPrefs.outgoingTransactionsEnabled) }
+    var miningEnabled by remember { mutableStateOf(notificationPrefs.miningRewardsEnabled) }
 
     fun triggerAuthForTarget(target: String) {
         val activity = context as? FragmentActivity
@@ -571,6 +579,39 @@ fun SettingsSecurityScreen(
                             }
                         }
                         Text("Select", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SECTION: NOTIFICATIONS
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                HapticUtil.performKeyClick(context)
+                                showNotificationsModal = true
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Notifications, contentDescription = null, tint = AmberGold, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Push Notifications", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Manage alerts for transactions and mining", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Text("Manage", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1567,6 +1608,106 @@ fun SettingsSecurityScreen(
         }
 
         // 9. ADD CONTACT MODAL
+        if (showNotificationsModal) {
+            Dialog(onDismissRequest = { showNotificationsModal = false }) {
+                GlassCard(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = AmberGold,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Notification Settings",
+                            color = TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Choose which alerts you want to receive.",
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Incoming Transactions", color = TextPrimary, fontSize = 14.sp)
+                            Switch(
+                                checked = incTxEnabled,
+                                onCheckedChange = { 
+                                    incTxEnabled = it
+                                    notificationPrefs.incomingTransactionsEnabled = it
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = CyanNeon, checkedTrackColor = CyanNeon.copy(alpha = 0.3f))
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Outgoing Transactions", color = TextPrimary, fontSize = 14.sp)
+                            Switch(
+                                checked = outTxEnabled,
+                                onCheckedChange = { 
+                                    outTxEnabled = it
+                                    notificationPrefs.outgoingTransactionsEnabled = it
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = CyanNeon, checkedTrackColor = CyanNeon.copy(alpha = 0.3f))
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Mining Rewards", color = TextPrimary, fontSize = 14.sp)
+                            Switch(
+                                checked = miningEnabled,
+                                onCheckedChange = { 
+                                    miningEnabled = it
+                                    notificationPrefs.miningRewardsEnabled = it
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = CyanNeon, checkedTrackColor = CyanNeon.copy(alpha = 0.3f))
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = { showNotificationsModal = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceElevated),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, GlassCardBorder)
+                        ) {
+                            Text("Done", color = TextPrimary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
         if (showAddContactModal) {
             var contactName by remember { mutableStateOf("") }
             var contactAddr by remember { mutableStateOf("") }

@@ -4,6 +4,7 @@
 - Wallet notifications + Mining UI (preview)
 - Wallet transaction push notifications for received and sent tokens.
 - Modern in-app notification permission request flow.
+- Added Notification Settings page to customize and toggle incoming, outgoing, and mining alerts.
 - Added Mining screen UI scaffolding (Note: Active mining logic is disabled pending native RandomX algorithm integration).
 
 ### v1.0.0 (2026-08-28)
