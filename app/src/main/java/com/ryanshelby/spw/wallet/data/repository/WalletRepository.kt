@@ -303,7 +303,14 @@ class WalletRepository(
         if (balanceResult.isSuccess) {
             val bal = balanceResult.getOrNull()
             if (bal != null) {
-                walletDao.updateNativeBalance(bal.balanceSpw, bal.balanceFeathers)
+                // Prevent node's outdated balance from overwriting our locally deducted balance
+                val pendingSends = walletDao.getAllTransactionsSync().filter {
+                    (it.type == "SEND" || it.type == "STEALTH") && it.status == "PENDING"
+                }
+                
+                if (pendingSends.isEmpty()) {
+                    walletDao.updateNativeBalance(bal.balanceSpw, bal.balanceFeathers)
+                }
             }
         }
 
@@ -524,8 +531,8 @@ class WalletRepository(
         )
 
         val broadcastResult = apiClient.broadcastTransaction(broadcastRequest)
-
-        val finalTxHash = if (broadcastResult.isSuccess) broadcastResult.getOrNull() ?: txid else txid
+        val isSuccess = broadcastResult.isSuccess
+        val finalTxHash = if (isSuccess) broadcastResult.getOrNull() ?: txid else txid
 
         val txEntity = TransactionEntity(
             txHash = finalTxHash,
@@ -536,40 +543,44 @@ class WalletRepository(
             amountFeathers = amountFeathers,
             tokenSymbol = "SPW",
             timestamp = System.currentTimeMillis(),
-            status = if (broadcastResult.isSuccess) "CONFIRMED" else "PENDING",
+            status = if (isSuccess) "PENDING" else "FAILED",
             feeSpw = gasFee,
             memo = memo.ifEmpty { if (isStealth) "Stealth Shielded Transfer" else "SPW Direct Transfer" },
-            blockNumber = 1L,
+            blockNumber = 0L,
             txPubkey = txPubkeyHex.ifEmpty { null },
             merkleRoot = SPWCrypto.sha256Hex("merkle:$finalTxHash"),
             bits = "1a0${finalTxHash.take(5)}",
-            confirmations = if (broadcastResult.isSuccess) 1 else 0,
+            confirmations = 0,
             nonce = finalTxHash.take(8).toLongOrNull(16) ?: 0L
         )
         walletDao.insertTransaction(txEntity)
 
-        val currentToken = walletDao.getNativeTokenSync()
-        if (currentToken != null) {
-            val newFeathers = currentToken.feathers - neededFeathers
-            val newSpw = newFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
-            walletDao.updateNativeBalance(newSpw, newFeathers)
+        if (isSuccess) {
+            val currentToken = walletDao.getNativeTokenSync()
+            if (currentToken != null) {
+                val newFeathers = currentToken.feathers - neededFeathers
+                val newSpw = newFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
+                walletDao.updateNativeBalance(newSpw, newFeathers)
+            }
+
+            // Trigger notification
+            notificationService.showOutgoingTransferNotification(
+                amount = amount,
+                symbol = "SPW",
+                toAddress = toAddress,
+                txHash = finalTxHash
+            )
+
+            // Refresh balance
+            repositoryScope.launch {
+                delay(1500)
+                refreshOnChainData()
+            }
+            return Result.success(finalTxHash)
+        } else {
+            val errorMsg = broadcastResult.exceptionOrNull()?.message ?: "Unknown error"
+            return Result.failure(Exception("Transaction rejected: $errorMsg"))
         }
-
-        // Trigger notification
-        notificationService.showOutgoingTransferNotification(
-            amount = amount,
-            symbol = "SPW",
-            toAddress = toAddress,
-            txHash = finalTxHash
-        )
-
-        // Refresh balance
-        repositoryScope.launch {
-            delay(1500)
-            refreshOnChainData()
-        }
-
-        return Result.success(finalTxHash)
     }
 
     suspend fun createNewAccount(name: String): SPWAccountKeys {
