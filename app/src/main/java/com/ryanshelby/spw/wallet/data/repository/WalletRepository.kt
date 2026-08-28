@@ -412,7 +412,7 @@ class WalletRepository(
             if (selectedTotal >= neededFeathers) break
         }
 
-        if (selectedTotal < neededFeathers && availableUtxos.isNotEmpty()) {
+        if (selectedTotal < neededFeathers) {
             return Result.failure(Exception("Insufficient balance. Need ${(neededFeathers.toDouble() / 1e8)} SPW, available: ${(selectedTotal.toDouble() / 1e8)} SPW"))
         }
 
