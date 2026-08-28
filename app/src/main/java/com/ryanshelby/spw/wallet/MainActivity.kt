@@ -596,8 +596,8 @@ private fun NavItem(
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
-        val boxSize = if (isHighlighted) 44.dp else 30.dp
-        val iconSize = if (isHighlighted) 32.dp else 18.dp
+        val boxSize = if (isHighlighted) 36.dp else 30.dp
+        val iconSize = if (isHighlighted) 34.dp else 18.dp
 
         Box(
             modifier = Modifier
