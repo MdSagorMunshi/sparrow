@@ -544,7 +544,7 @@ private fun CyberBottomNavigationBar(
                     onClick = { onNavigate("receive") }
                 )
                 NavItem(
-                    icon = ImageVector.vectorResource(id = R.drawable.ic_hammer),
+                    icon = ImageVector.vectorResource(id = R.drawable.ic_mining),
                     label = "Mining",
                     isSelected = currentRoute == "mining",
                     isHighlighted = true,
@@ -596,8 +596,8 @@ private fun NavItem(
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
-        val boxSize = if (isHighlighted) 36.dp else 30.dp
-        val iconSize = if (isHighlighted) 22.dp else 18.dp
+        val boxSize = if (isHighlighted) 44.dp else 30.dp
+        val iconSize = if (isHighlighted) 32.dp else 18.dp
 
         Box(
             modifier = Modifier
