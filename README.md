@@ -27,6 +27,9 @@ Sparrow provides a seamless and highly secure environment for managing your SPW 
 *   **📡 Real-Time RPC Sync**: Connect directly to SPW Network nodes for fast, trustless blockchain synchronization.
 *   **📱 QR Air-Gapped Vaults**: Generate and scan QR codes for secure, offline cold-storage interactions without exposing keys to an active network.
 
+## 🔮 Upcoming in Next Update
+*   **⛏️ In-Wallet SPW Mining**: Direct in-app background mining capabilities to secure the SPW network and earn rewards seamlessly from your mobile device.
+
 ## 🚀 Installation & Building
 
 ### Prerequisites
