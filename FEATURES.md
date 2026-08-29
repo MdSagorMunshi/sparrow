@@ -1,6 +1,6 @@
 # SPARROW Mobile Wallet - Features History
 
-### v2.1.0 (2026-08-30)
+### v2.1.0-beta (2026-08-30)
 - **Financial-Grade Institutional Interface Redesign**:
   - Ground-up overhaul replacing legacy cyberpunk neon and violet gradients with a calm, institutional visual language inspired by Coinbase and high-end banking apps.
   - Deep charcoal and graphite foundation (`#0C0E12`, `#14171F`) with hairline structural borders (`#1E2430`) and soft ivory typography (`#F9FAFB`).

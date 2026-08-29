@@ -195,21 +195,42 @@ fun AboutScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // Explicit Unofficial Disclaimer Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(SemanticWarningMuted)
-                            .border(0.8.dp, SemanticWarning, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    // Explicit Unofficial Disclaimer Badge & Beta Pill
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "UNOFFICIAL VERSION • SPW NETWORK",
-                            color = SemanticWarning,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(SemanticWarningMuted)
+                                .border(0.8.dp, SemanticWarning, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "UNOFFICIAL VERSION • SPW NETWORK",
+                                color = SemanticWarning,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(SemanticPositiveMuted)
+                                .border(0.8.dp, SemanticPositive, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "BETA",
+                                color = SemanticPositive,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -243,8 +264,8 @@ fun AboutScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SpecRow(label = "App Version", value = "v2.1.0")
-                    SpecRow(label = "Release Channel", value = "Stable Release")
+                    SpecRow(label = "App Version", value = "v2.1.0-beta")
+                    SpecRow(label = "Release Channel", value = "Public Beta Preview")
                     SpecRow(label = "Network Compatibility", value = "SPW Protocol v1.0")
                     SpecRow(label = "Architecture", value = "Kotlin Multiplatform • Jetpack Compose")
                     SpecRow(label = "Cryptographic Security", value = "ECDSA / ECDH Dual-Key Stealth")
