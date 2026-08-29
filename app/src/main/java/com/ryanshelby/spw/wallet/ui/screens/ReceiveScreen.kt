@@ -71,7 +71,9 @@ import kotlinx.coroutines.launch
 fun ReceiveScreen(
     walletAddress: String,
     walletName: String,
-    viewKeyHex: String,
+    spendPubHex: String = "",
+    viewPubHex: String = "",
+    viewKeyHex: String = "",
     network: NetworkConfig,
     activeLanguage: AppLanguage,
     onBack: () -> Unit
@@ -83,7 +85,12 @@ fun ReceiveScreen(
 
     var requestedAmount by remember { mutableStateOf("") }
     var copiedAddressRecently by remember { mutableStateOf(false) }
-    var copiedViewKeyRecently by remember { mutableStateOf(false) }
+    var copiedSpendPubRecently by remember { mutableStateOf(false) }
+    var copiedViewPubRecently by remember { mutableStateOf(false) }
+    var copiedBothRecently by remember { mutableStateOf(false) }
+
+    val effectiveSpendPub = spendPubHex.ifBlank { "" }
+    val effectiveViewPub = viewPubHex.ifBlank { viewKeyHex }
 
     val qrPayload = remember(walletAddress, requestedAmount) {
         if (requestedAmount.isNotBlank()) {
@@ -269,41 +276,185 @@ fun ReceiveScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Shield, contentDescription = null, tint = PurpleNeon, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Dual-Key Stealth Receiving", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Dual-Key Stealth Receiving", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Share your View Key with senders for shielded payments that nobody else can link on-chain.", color = TextSecondary, fontSize = 11.sp)
+                Text(
+                    text = "To receive private, untraceable stealth payments, share your Spend Public Key and View Public Key with the sender.",
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp
+                )
 
-                if (viewKeyHex.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text("View Key Hex (ECDH):", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                // 1. Spend Public Key
+                if (effectiveSpendPub.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("SPEND PUBLIC KEY (HEX):", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        if (copiedSpendPubRecently) {
+                            Text("Copied!", color = GreenEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .background(DarkSurfaceElevated)
+                            .border(1.dp, if (copiedSpendPubRecently) GreenEmerald.copy(alpha = 0.5f) else GlassCardBorder, RoundedCornerShape(8.dp))
                             .clickable {
-                                clipboardManager.setText(AnnotatedString(viewKeyHex))
+                                clipboardManager.setText(AnnotatedString(effectiveSpendPub))
                                 HapticUtil.performSuccess(context)
-                                copiedViewKeyRecently = true
+                                copiedSpendPubRecently = true
                                 scope.launch {
                                     delay(2000)
-                                    copiedViewKeyRecently = false
+                                    copiedSpendPubRecently = false
                                 }
                             }
-                            .padding(8.dp)
+                            .padding(10.dp)
                     ) {
-                        Text(
-                            text = viewKeyHex,
-                            color = PurpleNeon,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = effectiveSpendPub,
+                                color = CyanNeon,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = if (copiedSpendPubRecently) Icons.Default.Check else Icons.Default.ContentCopy,
+                                contentDescription = "Copy Spend Public Key",
+                                tint = if (copiedSpendPubRecently) GreenEmerald else TextMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
-                    if (copiedViewKeyRecently) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("View Key copied!", color = GreenEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // 2. View Public Key
+                if (effectiveViewPub.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("VIEW PUBLIC KEY (HEX - ECDH):", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        if (copiedViewPubRecently) {
+                            Text("Copied!", color = GreenEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DarkSurfaceElevated)
+                            .border(1.dp, if (copiedViewPubRecently) GreenEmerald.copy(alpha = 0.5f) else GlassCardBorder, RoundedCornerShape(8.dp))
+                            .clickable {
+                                clipboardManager.setText(AnnotatedString(effectiveViewPub))
+                                HapticUtil.performSuccess(context)
+                                copiedViewPubRecently = true
+                                scope.launch {
+                                    delay(2000)
+                                    copiedViewPubRecently = false
+                                }
+                            }
+                            .padding(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = effectiveViewPub,
+                                color = PurpleNeon,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = if (copiedViewPubRecently) Icons.Default.Check else Icons.Default.ContentCopy,
+                                contentDescription = "Copy View Public Key",
+                                tint = if (copiedViewPubRecently) GreenEmerald else TextMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Action buttons for stealth keys
+                if (effectiveSpendPub.isNotBlank() && effectiveViewPub.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val stealthShareText = "SPW Stealth Payment Keys:\nSpend Public Key: $effectiveSpendPub\nView Public Key: $effectiveViewPub"
+                        Button(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(stealthShareText))
+                                HapticUtil.performSuccess(context)
+                                copiedBothRecently = true
+                                scope.launch {
+                                    delay(2000)
+                                    copiedBothRecently = false
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DarkSurfaceElevated,
+                                contentColor = PurpleNeon
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).height(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (copiedBothRecently) Icons.Default.Check else Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                tint = if (copiedBothRecently) GreenEmerald else PurpleNeon,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (copiedBothRecently) "Copied Both!" else "Copy Both Keys",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (copiedBothRecently) GreenEmerald else PurpleNeon
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                HapticUtil.lightTap(context)
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, "My SPW Stealth Keys")
+                                    putExtra(Intent.EXTRA_TEXT, stealthShareText)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share SPW Stealth Keys"))
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PurpleNeon.copy(alpha = 0.2f),
+                                contentColor = PurpleNeon
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).height(40.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, tint = PurpleNeon, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Share Both Keys", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = PurpleNeon)
+                        }
                     }
                 }
             }

@@ -166,9 +166,34 @@ class SecurityManager(private val context: Context) {
 
     fun getViewKeyHex(): String = prefs.getString(KEY_VIEW_KEY_HEX, "") ?: ""
 
-    fun getSpendPubHex(): String = prefs.getString(KEY_SPEND_PUB_HEX, "") ?: ""
+    fun getSpendPubHex(): String {
+        val stored = prefs.getString(KEY_SPEND_PUB_HEX, "") ?: ""
+        if (stored.isNotEmpty()) return stored
+        val spendKey = getSpendKeyHex()
+        if (spendKey.isNotEmpty()) {
+            return try {
+                val acc = SPWCrypto.createAccountFromPrivateKey(spendKey)
+                prefs.edit().putString(KEY_SPEND_PUB_HEX, acc.spendPubHex).apply()
+                acc.spendPubHex
+            } catch (e: Exception) { "" }
+        }
+        return ""
+    }
 
-    fun getViewPubHex(): String = prefs.getString(KEY_VIEW_PUB_HEX, "") ?: ""
+    fun getViewPubHex(): String {
+        val stored = prefs.getString(KEY_VIEW_PUB_HEX, "") ?: ""
+        if (stored.isNotEmpty()) return stored
+        val spendKey = getSpendKeyHex()
+        val viewKey = getViewKeyHex()
+        if (spendKey.isNotEmpty()) {
+            return try {
+                val acc = SPWCrypto.createAccountFromPrivateKey(spendKey, viewKey.ifEmpty { null })
+                prefs.edit().putString(KEY_VIEW_PUB_HEX, acc.viewPubHex).apply()
+                acc.viewPubHex
+            } catch (e: Exception) { "" }
+        }
+        return ""
+    }
 
     fun getWalletName(): String = prefs.getString(KEY_WALLET_NAME, "Main Sparrow Account") ?: "Main Sparrow Account"
 

@@ -396,7 +396,8 @@ class MainActivity : FragmentActivity() {
                                 ReceiveScreen(
                                     walletAddress = securityManager.getWalletAddress(),
                                     walletName = securityManager.getWalletName(),
-                                    viewKeyHex = securityManager.getViewKeyHex(),
+                                    spendPubHex = securityManager.getSpendPubHex(),
+                                    viewPubHex = securityManager.getViewPubHex(),
                                     network = activeNetwork,
                                     activeLanguage = activeLanguage,
                                     onBack = { navController.popBackStack() }
