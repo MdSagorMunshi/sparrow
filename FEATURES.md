@@ -58,6 +58,17 @@
   - High-contrast isolated QR plate with instant haptic clipboard feedback and stealth key disclosure.
   - Minimalist viewfinder reticle with hairline white corner brackets in QR camera scanner.
   - Spring-driven security PIN numpad with pure white filled dot indicators.
+- **Dedicated About & System Specifications Screen**:
+  - Comprehensive About page accessible via new button in Settings > About & Information.
+  - Prominent unofficial community client disclaimer transparently identifying the app as an independent mobile client for the SPW Network.
+  - Version channel metadata (`v2.1.0 Stable Release`) and protocol compatibility.
+  - Direct 1-tap browser intent and clipboard copy shortcuts for:
+    - Official SPW Network website: `https://spw.network`
+    - Official GitHub repository: `https://github.com/MdSagorMunshi/sparrow`
+    - Official Block Explorer: `https://explorer.spw.network`
+  - Core Developer information: Ryan Shelby, GitHub `@MdSagorMunshi` (`https://github.com/MdSagorMunshi`).
+  - Direct 1-tap support email launcher and clipboard copy: `ryn@disr.it`.
+  - Non-custodial architectural privacy guarantee and cryptographic specifications.
 
 ### v2.0.0 (2026-08-28)
 - Wallet notifications + Mining UI (preview)

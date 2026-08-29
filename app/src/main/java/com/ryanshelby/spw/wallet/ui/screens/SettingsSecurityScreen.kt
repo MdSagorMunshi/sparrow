@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
@@ -150,6 +151,7 @@ fun SettingsSecurityScreen(
         securityManager.setAppTheme(it)
         AppThemeState.setTheme(it)
     },
+    onNavigateToAbout: () -> Unit = {},
     onBack: () -> Unit,
     onSetBiometricEnabled: (Boolean) -> Unit,
     onSetScramblePin: (Boolean) -> Unit,
@@ -974,6 +976,41 @@ fun SettingsSecurityScreen(
                         ) {
                             Text("Inspect", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DarkBackground)
                         }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // SECTION: ABOUT & SYSTEM
+            SectionHeader(title = "ABOUT & INFORMATION")
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                HapticUtil.performKeyClick(context)
+                                onNavigateToAbout()
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("About SPARROW", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("v2.1.0 (Stable) • Unofficial Client • Developer Info", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
                     }
                 }
             }

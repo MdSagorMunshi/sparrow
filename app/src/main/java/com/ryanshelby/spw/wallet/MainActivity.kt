@@ -90,6 +90,7 @@ import com.ryanshelby.spw.wallet.ui.screens.ReceiveScreen
 import com.ryanshelby.spw.wallet.ui.screens.SendTransferScreen
 import com.ryanshelby.spw.wallet.ui.screens.SettingsSecurityScreen
 import com.ryanshelby.spw.wallet.ui.screens.MiningScreen
+import com.ryanshelby.spw.wallet.ui.screens.AboutScreen
 import com.ryanshelby.spw.wallet.ui.components.NotificationPermissionHandler
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
 import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
@@ -514,6 +515,7 @@ class MainActivity : FragmentActivity() {
                                         securityManager.setAppTheme(theme)
                                         AppThemeState.setTheme(theme)
                                     },
+                                    onNavigateToAbout = { navController.navigate("about") },
                                     onBack = { navController.popBackStack() },
                                     onSetBiometricEnabled = { enabled ->
                                         isBiometricEnabled = enabled
@@ -569,6 +571,13 @@ class MainActivity : FragmentActivity() {
                                     onScanStealthOutputs = {
                                         repository.scanStealthOutputs()
                                     }
+                                )
+                            }
+
+                            // 8. About Screen
+                            composable("about") {
+                                AboutScreen(
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
                         }
