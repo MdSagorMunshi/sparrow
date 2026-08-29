@@ -119,6 +119,7 @@ class MainActivity : FragmentActivity() {
                 val contacts by repository.contactsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
                 val activeNetwork by repository.activeNetwork.collectAsStateWithLifecycle()
                 val activeLanguage by repository.activeLanguage.collectAsStateWithLifecycle()
+                val isRefreshing by repository.isRefreshing.collectAsStateWithLifecycle()
 
                 var hideBalance by remember { mutableStateOf(securityManager.isHideBalance()) }
                 var isBiometricEnabled by remember { mutableStateOf(securityManager.isBiometricEnabled()) }
@@ -280,6 +281,7 @@ class MainActivity : FragmentActivity() {
                             // 2. Dashboard Screen
                             composable("dashboard") {
                                 DashboardScreen(
+                                    isSyncing = isRefreshing,
                                     walletName = securityManager.getWalletName(),
                                     walletAddress = securityManager.getWalletAddress(),
                                     viewKeyHex = securityManager.getViewKeyHex(),

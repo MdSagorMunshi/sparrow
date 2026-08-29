@@ -361,13 +361,18 @@ class WalletRepository(
                 }
                 walletDao.insertTransactions(dbTxs)
                 
+                val activeAccount = walletDao.getAccountByAddress(address)
+                val cutoffTime = (activeAccount?.createdAt ?: System.currentTimeMillis()) - 60000L // 1 minute buffer for edge cases
+
                 dbTxs.forEach { tx ->
                     if (!existingTxHashes.contains(tx.txHash) && tx.toAddress == address && tx.fromAddress != address) {
-                        notificationService.showIncomingTransferNotification(
-                            amount = tx.amountSpw,
-                            symbol = tx.tokenSymbol,
-                            fromAddress = tx.fromAddress
-                        )
+                        if (tx.timestamp >= cutoffTime) {
+                            notificationService.showIncomingTransferNotification(
+                                amount = tx.amountSpw,
+                                symbol = tx.tokenSymbol,
+                                fromAddress = tx.fromAddress
+                            )
+                        }
                     }
                 }
             }
@@ -618,8 +623,7 @@ class WalletRepository(
                 isPrimary = true
             )
             walletDao.insertAccount(entity)
-            walletDao.setActiveAccount(entity.id)
-            refreshOnChainData()
+            switchActiveAccount(entity)
             Result.success(keys)
         } catch (e: Exception) {
             Result.failure(e)
@@ -641,8 +645,7 @@ class WalletRepository(
                 isPrimary = true
             )
             walletDao.insertAccount(entity)
-            walletDao.setActiveAccount(entity.id)
-            refreshOnChainData()
+            switchActiveAccount(entity)
             Result.success(keys)
         } catch (e: Exception) {
             Result.failure(e)
@@ -650,6 +653,10 @@ class WalletRepository(
     }
 
     suspend fun switchActiveAccount(account: AccountEntity) {
+        // Clear previous account state from DB
+        walletDao.clearTransactions()
+        walletDao.clearTokens()
+
         securityManager.setWalletName(account.name)
         if (account.mnemonic != null) {
             securityManager.importMnemonic(account.mnemonic, account.name)
@@ -657,6 +664,20 @@ class WalletRepository(
             securityManager.importPrivateKey(account.spendKeyHex, account.viewKeyHex, account.name)
         }
         walletDao.setActiveAccount(account.id)
+        
+        // Re-initialize a blank native token for the new active account
+        val nativeToken = TokenEntity(
+            symbol = "SPW",
+            name = "Sparrow",
+            balance = 0.0,
+            feathers = 0L,
+            decimals = 8,
+            isNative = true,
+            network = _activeNetwork.value.name,
+            iconHexColor = 0xFF00E5FF
+        )
+        walletDao.insertTokens(listOf(nativeToken))
+        
         refreshOnChainData()
     }
 

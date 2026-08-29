@@ -81,6 +81,7 @@ import java.util.Locale
 
 @Composable
 fun DashboardScreen(
+    isSyncing: Boolean = false,
     walletName: String,
     walletAddress: String,
     viewKeyHex: String = "",
@@ -143,6 +144,7 @@ fun DashboardScreen(
         // 1. 3D Holographic Cyber Card (contains sleek QR Scan and Show buttons)
         item {
             Holographic3DCard(
+                isSyncing = isSyncing,
                 walletName = walletName,
                 walletAddress = walletAddress,
                 totalBalanceSpw = totalBalanceSpw,

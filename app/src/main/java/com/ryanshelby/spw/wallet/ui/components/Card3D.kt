@@ -64,6 +64,7 @@ import java.util.Locale
 
 @Composable
 fun Holographic3DCard(
+    isSyncing: Boolean = false,
     walletName: String,
     walletAddress: String,
     totalBalanceSpw: Double,
@@ -288,13 +289,23 @@ fun Holographic3DCard(
                         color = CyanNeon
                     )
                 } else {
-                    Text(
-                        text = if (totalBalanceSpw == 0.0) "0.00000000 SPW" else String.format(Locale.US, "%.8f SPW", totalBalanceSpw).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it },
-                        style = MaterialTheme.typography.displaySmall,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.5).sp
-                    )
+                    if (isSyncing && totalBalanceSpw == 0.0) {
+                        Text(
+                            text = "Syncing Node...",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = CyanNeon.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    } else {
+                        Text(
+                            text = if (totalBalanceSpw == 0.0) "0.00000000 SPW" else String.format(Locale.US, "%.8f SPW", totalBalanceSpw).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it },
+                            style = MaterialTheme.typography.displaySmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp
+                        )
+                    }
                     val formattedFeathers = NumberFormat.getNumberInstance(Locale.US).format(
                         if (totalBalanceFeathers > 0) totalBalanceFeathers else (totalBalanceSpw * SPWCrypto.FEATHERS_PER_SPW).toLong()
                     )
