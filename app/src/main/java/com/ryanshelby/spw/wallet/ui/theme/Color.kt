@@ -4,84 +4,86 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // ==========================================================================
-// Financial-Grade Monochrome & Restrained Emerald Design System (Coinbase/Apple style)
+// Dynamic Financial-Grade Design System (Dark, Light, and Pure OLED Black)
 // ==========================================================================
 
-// Foundation & Surfaces (Deep, credible near-black / graphite)
-val FinanceBackground = Color(0xFF0C0E12)
-val SurfacePrimary = Color(0xFF14171F)
-val SurfaceElevated = Color(0xFF1C212B)
-val SurfaceSubtle = Color(0xFF222836)
-val BorderSubtle = Color(0xFF1E2430)
-val BorderStrong = Color(0xFF333B4D)
+// Foundation & Surfaces (Dynamic via AppThemeState)
+val FinanceBackground: Color get() = AppThemeState.colors.background
+val SurfacePrimary: Color get() = AppThemeState.colors.surfacePrimary
+val SurfaceElevated: Color get() = AppThemeState.colors.surfaceElevated
+val SurfaceSubtle: Color get() = AppThemeState.colors.surfaceSubtle
+val BorderSubtle: Color get() = AppThemeState.colors.borderSubtle
+val BorderStrong: Color get() = AppThemeState.colors.borderStrong
 
-// Typography & Content Hierarchy (Soft ivory / clean neutral slate)
-val TextPrimary = Color(0xFFF9FAFB)
-val TextSecondary = Color(0xFF9CA3AF)
-val TextMuted = Color(0xFF64748B)
-val DividerColor = Color(0xFF1E2430)
+// Typography & Content Hierarchy
+val TextPrimary: Color get() = AppThemeState.colors.textPrimary
+val TextSecondary: Color get() = AppThemeState.colors.textSecondary
+val TextMuted: Color get() = AppThemeState.colors.textMuted
+val DividerColor: Color get() = AppThemeState.colors.borderSubtle
 
-// Primary Action Buttons (Authoritative pure white on dark graphite, Coinbase/Apple style)
-val ButtonPrimary = Color(0xFFFFFFFF)
-val ButtonPrimaryText = Color(0xFF0C0E12)
-val ButtonSecondary = Color(0xFF1C212B)
-val ButtonSecondaryText = Color(0xFFF9FAFB)
+// Primary Action Buttons
+val ButtonPrimary: Color get() = AppThemeState.colors.buttonPrimary
+val ButtonPrimaryText: Color get() = AppThemeState.colors.buttonPrimaryText
+val ButtonSecondary: Color get() = AppThemeState.colors.buttonSecondary
+val ButtonSecondaryText: Color get() = AppThemeState.colors.buttonSecondaryText
 
-// Restrained Accent: Deep Emerald strictly for positive balance changes and live status
-val AccentPrimary = Color(0xFF10B981)
-val AccentMuted = Color(0x1F10B981) // 12% opacity tint
-val AccentHover = Color(0xFF059669)
+// Restrained Accent & Financial Indicators
+val AccentPrimary: Color get() = AppThemeState.colors.accentPrimary
+val AccentMuted: Color get() = AppThemeState.colors.accentPrimary.copy(alpha = 0.12f)
+val AccentHover: Color get() = AppThemeState.colors.accentPrimary
 
-// Semantic Financial Indicators
-val SemanticPositive = Color(0xFF10B981) // Incoming transactions (+SPW), positive gains, confirmed status
-val SemanticPositiveMuted = Color(0x1F10B981)
-val SemanticError = Color(0xFFEF4444) // Negative values, failed states, destructive actions
-val SemanticErrorMuted = Color(0x1FEF4444)
-val SemanticWarning = Color(0xFFF59E0B) // Pending confirmations, warnings
-val SemanticWarningMuted = Color(0x1FF59E0B)
-val SemanticNeutral = Color(0xFF64748B) // Informational pills
+val SemanticPositive: Color get() = AppThemeState.colors.semanticPositive
+val SemanticPositiveMuted: Color get() = AppThemeState.colors.semanticPositive.copy(alpha = 0.12f)
+val SemanticError: Color get() = AppThemeState.colors.semanticError
+val SemanticErrorMuted: Color get() = AppThemeState.colors.semanticError.copy(alpha = 0.12f)
+val SemanticWarning: Color get() = AppThemeState.colors.semanticWarning
+val SemanticWarningMuted: Color get() = AppThemeState.colors.semanticWarning.copy(alpha = 0.12f)
+val SemanticNeutral: Color get() = AppThemeState.colors.semanticNeutral
 
 // Shimmer gradient colors
-val ShimmerBase = Color(0xFF14171F)
-val ShimmerHighlight = Color(0xFF222938)
+val ShimmerBase: Color get() = AppThemeState.colors.shimmerBase
+val ShimmerHighlight: Color get() = AppThemeState.colors.shimmerHighlight
 
 // ==========================================================================
-// Compatibility Aliases (Map to clean neutral slate / white rather than green)
+// Compatibility Aliases
 // ==========================================================================
-val DarkBackground = FinanceBackground
-val DarkSurface = SurfacePrimary
-val DarkSurfaceElevated = SurfaceElevated
-val GlassCardBackground = SurfacePrimary
-val GlassCardBorder = BorderSubtle
-val GlassCardBorderSecondary = BorderSubtle
+val DarkBackground: Color get() = FinanceBackground
+val DarkSurface: Color get() = SurfacePrimary
+val DarkSurfaceElevated: Color get() = SurfaceElevated
+val GlassCardBackground: Color get() = SurfacePrimary
+val GlassCardBorder: Color get() = BorderSubtle
+val GlassCardBorderSecondary: Color get() = BorderSubtle
 
-val CyanNeon = TextPrimary // Map legacy cyan to clean text/white, NOT green!
-val CyanGlow = TextSecondary
-val PurpleNeon = SurfaceElevated
-val PurpleGlow = SurfaceElevated
-val GreenEmerald = SemanticPositive
-val RedCoral = SemanticError
-val AmberGold = SemanticWarning
-val BlueCobalt = SemanticNeutral
+val CyanNeon: Color get() = TextPrimary
+val CyanGlow: Color get() = TextSecondary
+val PurpleNeon: Color get() = SurfaceElevated
+val PurpleGlow: Color get() = SurfaceElevated
+val GreenEmerald: Color get() = SemanticPositive
+val RedCoral: Color get() = SemanticError
+val AmberGold: Color get() = SemanticWarning
+val BlueCobalt: Color get() = SemanticNeutral
 
-// Calm, subtle gradients
-val HolographicCardGradient = Brush.linearGradient(
-    colors = listOf(
-        SurfacePrimary,
-        SurfaceElevated
+// Dynamic gradients
+val HolographicCardGradient: Brush
+    get() = Brush.linearGradient(
+        colors = listOf(
+            SurfacePrimary,
+            SurfaceElevated
+        )
     )
-)
 
-val CyanPurpleGradient = Brush.linearGradient(
-    colors = listOf(
-        SurfaceElevated,
-        SurfaceSubtle
+val CyanPurpleGradient: Brush
+    get() = Brush.linearGradient(
+        colors = listOf(
+            SurfaceElevated,
+            SurfaceSubtle
+        )
     )
-)
 
-val GlowBackgroundGradient = Brush.radialGradient(
-    colors = listOf(
-        Color(0x05FFFFFF),
-        Color.Transparent
+val GlowBackgroundGradient: Brush
+    get() = Brush.radialGradient(
+        colors = listOf(
+            Color(0x05FFFFFF),
+            Color.Transparent
+        )
     )
-)

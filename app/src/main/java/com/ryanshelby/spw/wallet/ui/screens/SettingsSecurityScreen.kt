@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -94,22 +95,34 @@ import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.security.KeyStoreTestResult
 import com.ryanshelby.spw.wallet.data.local.NotificationPreferences
 import com.ryanshelby.spw.wallet.security.KeystoreDiagnosticReport
+import com.ryanshelby.spw.wallet.security.OledDisplayDetector
 import com.ryanshelby.spw.wallet.security.SecureKeyStorage
 import com.ryanshelby.spw.wallet.security.SecurityManager
+import com.ryanshelby.spw.wallet.ui.components.FinanceCard
 import com.ryanshelby.spw.wallet.ui.components.GlassCard
 import com.ryanshelby.spw.wallet.ui.components.PinPadView
 import com.ryanshelby.spw.wallet.ui.theme.AmberGold
+import com.ryanshelby.spw.wallet.ui.theme.AppThemeState
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
+import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
 import com.ryanshelby.spw.wallet.ui.theme.GreenEmerald
-import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
 import com.ryanshelby.spw.wallet.ui.theme.RedCoral
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.SemanticErrorMuted
+import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
+import com.ryanshelby.spw.wallet.ui.theme.SemanticPositiveMuted
+import com.ryanshelby.spw.wallet.ui.theme.SemanticWarning
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.ThemeMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -131,6 +144,11 @@ fun SettingsSecurityScreen(
     onTogglePrivacyShield: (Boolean) -> Unit = { securityManager.setPrivacyShieldEnabled(it) },
     autoLockTimeoutMinutes: Int = securityManager.getAutoLockTimeoutMinutes(),
     onSetAutoLockTimeout: (Int) -> Unit = { securityManager.setAutoLockTimeoutMinutes(it) },
+    currentTheme: ThemeMode = securityManager.getAppTheme(),
+    onSelectTheme: (ThemeMode) -> Unit = {
+        securityManager.setAppTheme(it)
+        AppThemeState.setTheme(it)
+    },
     onBack: () -> Unit,
     onSetBiometricEnabled: (Boolean) -> Unit,
     onSetScramblePin: (Boolean) -> Unit,
@@ -152,6 +170,10 @@ fun SettingsSecurityScreen(
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val strings = remember(activeLanguage) { TranslationHelper.getStrings(activeLanguage) }
+
+    val oledDetection = remember { OledDisplayDetector.detectDisplay(context) }
+    var showThemeModal by remember { mutableStateOf(false) }
+    var showOledUnsupportedDialog by remember { mutableStateOf(false) }
 
     var showSeedModal by remember { mutableStateOf(false) }
     var showKeysModal by remember { mutableStateOf(false) }
@@ -661,6 +683,47 @@ fun SettingsSecurityScreen(
                             Column {
                                 Text(strings.language, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 Text("${activeLanguage.flag} ${activeLanguage.displayName}", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Text("Select", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    HorizontalDivider(color = GlassCardBorder, thickness = 0.5.dp)
+
+                    // Theme Selector Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                HapticUtil.performKeyClick(context)
+                                showThemeModal = true
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Palette, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("App Theme", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(currentTheme.displayName, color = TextSecondary, fontSize = 11.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(if (oledDetection.isOled) SemanticPositiveMuted else SurfaceSubtle)
+                                            .border(0.6.dp, if (oledDetection.isOled) SemanticPositive else BorderSubtle, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = if (oledDetection.isOled) "OLED PANEL" else "LCD DISPLAY",
+                                            color = if (oledDetection.isOled) SemanticPositive else TextMuted,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                         }
                         Text("Select", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -1784,6 +1847,178 @@ fun SettingsSecurityScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7.1 THEME SELECTION MODAL
+        if (showThemeModal) {
+            Dialog(onDismissRequest = { showThemeModal = false }) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Palette, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Select App Theme", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            }
+                            IconButton(
+                                onClick = { showThemeModal = false },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
+                            }
+                        }
+
+                        HorizontalDivider(color = BorderSubtle, thickness = 0.8.dp)
+
+                        ThemeMode.entries.forEach { mode ->
+                            val isSelected = mode == currentTheme
+                            val isOledMode = mode == ThemeMode.OLED
+                            val isOledSupported = oledDetection.isOled
+                            val isEnabled = !isOledMode || isOledSupported
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        when (mode) {
+                                            ThemeMode.DARK -> Color(0xFF0C0E12)
+                                            ThemeMode.LIGHT -> Color(0xFFF8FAFC)
+                                            ThemeMode.OLED -> Color(0xFF000000)
+                                        }
+                                    )
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 0.8.dp,
+                                        color = if (isSelected) (if (mode == ThemeMode.LIGHT) Color(0xFF0F172A) else Color.White) else BorderSubtle,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable {
+                                        if (isEnabled) {
+                                            HapticUtil.performKeyClick(context)
+                                            onSelectTheme(mode)
+                                            showThemeModal = false
+                                        } else {
+                                            HapticUtil.performKeyClick(context)
+                                            showOledUnsupportedDialog = true
+                                        }
+                                    }
+                                    .padding(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = mode.displayName,
+                                                color = if (mode == ThemeMode.LIGHT) Color(0xFF0F172A) else Color(0xFFF9FAFB),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            if (isOledMode) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(if (isOledSupported) SemanticPositiveMuted else SemanticErrorMuted)
+                                                        .border(0.6.dp, if (isOledSupported) SemanticPositive else SemanticError, RoundedCornerShape(4.dp))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text(
+                                                        text = if (isOledSupported) "OLED DETECTED" else "OLED REQUIRED",
+                                                        color = if (isOledSupported) SemanticPositive else SemanticError,
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = mode.description,
+                                            color = if (mode == ThemeMode.LIGHT) Color(0xFF475569) else Color(0xFF9CA3AF),
+                                            fontSize = 11.sp
+                                        )
+                                        if (isOledMode && !isOledSupported) {
+                                            Spacer(modifier = Modifier.height(3.dp))
+                                            Text(
+                                                text = "Unavailable: Active display is LCD/IPS",
+                                                color = SemanticError,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = if (mode == ThemeMode.LIGHT) Color(0xFF0F172A) else Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    } else if (isOledMode && !isOledSupported) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = "Locked",
+                                            tint = TextMuted,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7.2 OLED UNSUPPORTED INFORMATIVE MODAL
+        if (showOledUnsupportedDialog) {
+            Dialog(onDismissRequest = { showOledUnsupportedDialog = false }) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = SemanticWarning, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("OLED Display Required", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            text = "OLED Pure Black mode physically switches off individual AMOLED/OLED subpixels for true zero power draw and infinite contrast.\n\nYour device was detected with a standard LCD/IPS display panel where the backlight remains active across the entire screen.\n\nDiagnostic: ${oledDetection.details}",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
+                        )
+                        Button(
+                            onClick = { showOledUnsupportedDialog = false },
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ButtonPrimary,
+                                contentColor = ButtonPrimaryText
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Understand", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

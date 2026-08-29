@@ -79,7 +79,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ryanshelby.spw.wallet.security.HapticUtil
-
+import com.ryanshelby.spw.wallet.security.SecurityManager
+import com.ryanshelby.spw.wallet.ui.components.Holographic3DCard
 import com.ryanshelby.spw.wallet.ui.screens.ChangePinScreen
 import com.ryanshelby.spw.wallet.ui.screens.DashboardScreen
 import com.ryanshelby.spw.wallet.ui.screens.HistoryScreen
@@ -92,6 +93,7 @@ import com.ryanshelby.spw.wallet.ui.screens.MiningScreen
 import com.ryanshelby.spw.wallet.ui.components.NotificationPermissionHandler
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
 import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.AppThemeState
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
@@ -104,6 +106,7 @@ import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.ThemeMode
 import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -129,6 +132,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        AppThemeState.setTheme(SPWApplication.instance.securityManager.getAppTheme())
         updatePrivacyShield(SPWApplication.instance.securityManager.isPrivacyShieldEnabled())
 
         setContent {
@@ -159,6 +163,7 @@ class MainActivity : FragmentActivity() {
                 var isWalletUnlocked by remember { mutableStateOf(!securityManager.isPinSet()) }
                 var isPrivacyShieldEnabled by remember { mutableStateOf(securityManager.isPrivacyShieldEnabled()) }
                 var autoLockTimeoutMinutes by remember { mutableIntStateOf(securityManager.getAutoLockTimeoutMinutes()) }
+                var currentTheme by remember { mutableStateOf(securityManager.getAppTheme()) }
 
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
@@ -502,6 +507,12 @@ class MainActivity : FragmentActivity() {
                                     onSetAutoLockTimeout = { timeout ->
                                         autoLockTimeoutMinutes = timeout
                                         securityManager.setAutoLockTimeoutMinutes(timeout)
+                                    },
+                                    currentTheme = currentTheme,
+                                    onSelectTheme = { theme ->
+                                        currentTheme = theme
+                                        securityManager.setAppTheme(theme)
+                                        AppThemeState.setTheme(theme)
                                     },
                                     onBack = { navController.popBackStack() },
                                     onSetBiometricEnabled = { enabled ->

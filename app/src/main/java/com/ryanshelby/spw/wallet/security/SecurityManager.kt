@@ -6,6 +6,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.ryanshelby.spw.wallet.ui.theme.ThemeMode
 import java.security.MessageDigest
 
 class SecurityManager(private val context: Context) {
@@ -37,6 +38,7 @@ class SecurityManager(private val context: Context) {
         private const val KEY_PRIVACY_SHIELD_ENABLED = "key_privacy_shield_enabled"
         private const val KEY_AUTO_LOCK_TIMEOUT_MINUTES = "key_auto_lock_timeout_minutes"
         private const val KEY_LAST_BACKGROUND_TIMESTAMP = "key_last_background_timestamp"
+        private const val KEY_APP_THEME = "key_app_theme"
     }
 
     init {
@@ -363,6 +365,21 @@ class SecurityManager(private val context: Context) {
         val elapsedMillis = System.currentTimeMillis() - lastBgTime
         val timeoutMillis = timeoutMinutes * 60 * 1000L
         return elapsedMillis >= timeoutMillis
+    }
+
+    // ── Theme Mode Settings ─────────────────────────────────────────────────
+
+    fun getAppTheme(): ThemeMode {
+        val savedName = prefs.getString(KEY_APP_THEME, ThemeMode.DARK.name) ?: ThemeMode.DARK.name
+        return try {
+            ThemeMode.valueOf(savedName)
+        } catch (e: Exception) {
+            ThemeMode.DARK
+        }
+    }
+
+    fun setAppTheme(theme: ThemeMode) {
+        prefs.edit().putString(KEY_APP_THEME, theme.name).apply()
     }
 
     private fun hashString(input: String): String {

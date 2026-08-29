@@ -44,6 +44,14 @@
 - **Transaction CSV & Tax Ledger Export**:
   - One-tap standard accounting CSV ledger export compatible with tax reporting software (CoinTracker, Koinly).
   - Secure native Android share sheet integration via Android `FileProvider`.
+- **Dynamic Theme Engine (Dark, Light, OLED Pure Black)**:
+  - **Dark (Default)**: Deep institutional charcoal and graphite foundation (`#0C0E12`, `#14171F`) with hairline structural borders (`#1E2430`).
+  - **Light**: Crisp financial-grade white and slate palette (`#F8FAFC`, `#FFFFFF`, `#0F172A`) with automatic status bar and navigation bar icon contrast adaptation.
+  - **OLED Pure Black**: 100% True Black (`#000000`) canvas and card surfaces engineered for complete subpixel power shutdown on AMOLED/OLED displays.
+- **Hardware OLED / AMOLED Display Detection & Guardrail**:
+  - Multi-vector hardware display verification checking Wide Color Gamut (Display P3), Display HDR capabilities (`isHdr` and `supportedHdrTypes`), and kernel/sysfs panel descriptors.
+  - Device diagnostic badges (`OLED PANEL` vs `LCD DISPLAY`) in Settings.
+  - Informative lock protection restricting OLED mode strictly to verified AMOLED/OLED panels to ensure physical battery savings and prevent backlight bleed on LCD screens.
 - **Institutional Key & Scanner Utilities**:
   - High-contrast isolated QR plate with instant haptic clipboard feedback and stealth key disclosure.
   - Minimalist viewfinder reticle with hairline white corner brackets in QR camera scanner.
