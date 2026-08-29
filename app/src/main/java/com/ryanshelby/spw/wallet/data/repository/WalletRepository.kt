@@ -67,6 +67,11 @@ class WalletRepository(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _isInitialSyncing = MutableStateFlow(false)
+    val isInitialSyncing: StateFlow<Boolean> = _isInitialSyncing.asStateFlow()
+
+    private val syncedAddresses = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
     private var activeSyncJob: Job? = null
     private var periodicSyncJob: Job? = null
 
@@ -145,11 +150,14 @@ class WalletRepository(
             )
             walletDao.insertAccount(dbAccount)
 
+            val cached = securityManager.getCachedBalance(account.address)
+            val initialBalance = cached?.first ?: 0.0
+            val initialFeathers = cached?.second ?: 0L
             val nativeToken = TokenEntity(
                 symbol = "SPW",
                 name = "Sparrow",
-                balance = 0.0,
-                feathers = 0L,
+                balance = initialBalance,
+                feathers = initialFeathers,
                 decimals = 8,
                 isNative = true,
                 network = _activeNetwork.value.name,
@@ -157,6 +165,7 @@ class WalletRepository(
             )
             walletDao.insertTokens(listOf(nativeToken))
 
+            _isInitialSyncing.value = (cached == null)
             refreshOnChainData()
             startPeriodicSync()
             Result.success(account)
@@ -197,11 +206,14 @@ class WalletRepository(
             )
             walletDao.insertAccount(dbAccount)
 
+            val cached = securityManager.getCachedBalance(account.address)
+            val initialBalance = cached?.first ?: 0.0
+            val initialFeathers = cached?.second ?: 0L
             val nativeToken = TokenEntity(
                 symbol = "SPW",
                 name = "Sparrow",
-                balance = 0.0,
-                feathers = 0L,
+                balance = initialBalance,
+                feathers = initialFeathers,
                 decimals = 8,
                 isNative = true,
                 network = _activeNetwork.value.name,
@@ -209,6 +221,7 @@ class WalletRepository(
             )
             walletDao.insertTokens(listOf(nativeToken))
 
+            _isInitialSyncing.value = (cached == null)
             refreshOnChainData()
             startPeriodicSync()
             Result.success(account)
@@ -223,6 +236,8 @@ class WalletRepository(
         activeSyncJob?.cancel()
         activeSyncJob = null
         _isRefreshing.value = false
+        _isInitialSyncing.value = false
+        syncedAddresses.clear()
 
         // Clear Room database
         walletDao.clearAccounts()
@@ -282,6 +297,12 @@ class WalletRepository(
 
         // Initialize single native SPW token entity with cached balance or 0
         val cached = securityManager.getCachedBalance(myAddress)
+        if (cached != null) {
+            syncedAddresses.add(myAddress)
+            _isInitialSyncing.value = false
+        } else {
+            _isInitialSyncing.value = true
+        }
         val initialBalance = cached?.first ?: 0.0
         val initialFeathers = cached?.second ?: 0L
         val nativeToken = TokenEntity(
@@ -406,8 +427,10 @@ class WalletRepository(
                 }
             }
         } finally {
+            syncedAddresses.add(address)
             if (securityManager.getWalletAddress() == address) {
                 _isRefreshing.value = false
+                _isInitialSyncing.value = false
             }
         }
     }
@@ -709,6 +732,9 @@ class WalletRepository(
         
         // Immediately restore this account's cached balance into the native token so UI updates instantly
         val cached = securityManager.getCachedBalance(account.address)
+        val hasSyncedBefore = cached != null || syncedAddresses.contains(account.address)
+        _isInitialSyncing.value = !hasSyncedBefore
+
         val initialBalance = cached?.first ?: 0.0
         val initialFeathers = cached?.second ?: 0L
 
