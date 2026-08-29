@@ -27,9 +27,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.filled.Send
+import android.widget.Toast
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,8 +59,10 @@ import com.ryanshelby.spw.wallet.data.model.NetworkConfig
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
 import com.ryanshelby.spw.wallet.data.model.TransactionStatus
 import com.ryanshelby.spw.wallet.data.model.TransactionType
+import com.ryanshelby.spw.wallet.security.CsvExportUtil
 import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.ui.components.FinanceCard
+import com.ryanshelby.spw.wallet.ui.components.Identicon
 import com.ryanshelby.spw.wallet.ui.components.TransactionDetailDialog
 import com.ryanshelby.spw.wallet.ui.components.TransactionRowSkeleton
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
@@ -176,6 +180,36 @@ fun HistoryScreen(
                         text = "${network.name} Ledger",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Export CSV Ledger Button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfacePrimary)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                        .bouncyClickable {
+                            HapticUtil.performKeyClick(context)
+                            if (transactions.isEmpty()) {
+                                Toast.makeText(context, "No transactions to export", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val ok = CsvExportUtil.exportAndShareCsv(context, transactions)
+                                if (!ok) {
+                                    Toast.makeText(context, "Failed to export CSV", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Export CSV Ledger",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(17.dp)
                     )
                 }
             }
@@ -347,23 +381,33 @@ fun HistoryScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(SurfaceSubtle),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = when {
-                                                isStealth -> Icons.Default.Shield
-                                                isIncoming -> Icons.AutoMirrored.Filled.CallReceived
-                                                else -> Icons.AutoMirrored.Filled.Send
-                                            },
-                                            contentDescription = null,
-                                            tint = iconColor,
-                                            modifier = Modifier.size(18.dp)
+                                    // Identicon with action badge overlay
+                                    Box(modifier = Modifier.size(40.dp)) {
+                                        Identicon(
+                                            address = if (isIncoming) tx.fromAddress else tx.toAddress,
+                                            size = 40.dp,
+                                            shape = RoundedCornerShape(10.dp)
                                         )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .align(Alignment.BottomEnd)
+                                                .clip(CircleShape)
+                                                .background(SurfacePrimary)
+                                                .border(0.8.dp, BorderSubtle, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = when {
+                                                    isStealth -> Icons.Default.Shield
+                                                    isIncoming -> Icons.AutoMirrored.Filled.CallReceived
+                                                    else -> Icons.AutoMirrored.Filled.Send
+                                                },
+                                                contentDescription = null,
+                                                tint = iconColor,
+                                                modifier = Modifier.size(10.dp)
+                                            )
+                                        }
                                     }
 
                                     Spacer(modifier = Modifier.width(12.dp))

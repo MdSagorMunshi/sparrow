@@ -2,6 +2,7 @@ package com.ryanshelby.spw.wallet
 
 import com.ryanshelby.spw.wallet.security.BiometricHelper
 import android.os.Bundle
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,7 +44,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,6 +67,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -103,9 +110,26 @@ import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
+    fun updatePrivacyShield(enabled: Boolean) {
+        if (enabled) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        SPWApplication.instance.securityManager.recordBackgroundTimestamp()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        updatePrivacyShield(SPWApplication.instance.securityManager.isPrivacyShieldEnabled())
 
         setContent {
             MyApplicationTheme {
@@ -133,6 +157,27 @@ class MainActivity : FragmentActivity() {
                 var isBiometricEnabled by remember { mutableStateOf(securityManager.isBiometricEnabled()) }
                 var isScramblePin by remember { mutableStateOf(securityManager.isScramblePin()) }
                 var isWalletUnlocked by remember { mutableStateOf(!securityManager.isPinSet()) }
+                var isPrivacyShieldEnabled by remember { mutableStateOf(securityManager.isPrivacyShieldEnabled()) }
+                var autoLockTimeoutMinutes by remember { mutableIntStateOf(securityManager.getAutoLockTimeoutMinutes()) }
+
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            if (securityManager.hasWallet() && securityManager.isPinSet() && securityManager.shouldAutoLock()) {
+                                isWalletUnlocked = false
+                                navController.navigate("pin_lock") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                            securityManager.resetBackgroundTimer()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
 
                 val hasWallet = securityManager.hasWallet()
                 val isPinSet = securityManager.isPinSet()
@@ -447,6 +492,17 @@ class MainActivity : FragmentActivity() {
                                     isBiometricAvailable = securityManager.canAuthenticateWithBiometrics(),
                                     isBiometricEnabled = isBiometricEnabled,
                                     isScramblePin = isScramblePin,
+                                    isPrivacyShieldEnabled = isPrivacyShieldEnabled,
+                                    onTogglePrivacyShield = { enabled ->
+                                        isPrivacyShieldEnabled = enabled
+                                        securityManager.setPrivacyShieldEnabled(enabled)
+                                        updatePrivacyShield(enabled)
+                                    },
+                                    autoLockTimeoutMinutes = autoLockTimeoutMinutes,
+                                    onSetAutoLockTimeout = { timeout ->
+                                        autoLockTimeoutMinutes = timeout
+                                        securityManager.setAutoLockTimeoutMinutes(timeout)
+                                    },
                                     onBack = { navController.popBackStack() },
                                     onSetBiometricEnabled = { enabled ->
                                         isBiometricEnabled = enabled

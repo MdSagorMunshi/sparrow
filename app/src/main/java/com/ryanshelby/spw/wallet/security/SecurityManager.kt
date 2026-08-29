@@ -34,6 +34,9 @@ class SecurityManager(private val context: Context) {
         private const val KEY_ACTIVE_NETWORK_ID = "key_active_network_id"
         private const val KEY_CUSTOM_NODE_URL = "key_custom_node_url"
         private const val KEY_STEALTH_MODE_ENABLED = "key_stealth_mode_enabled"
+        private const val KEY_PRIVACY_SHIELD_ENABLED = "key_privacy_shield_enabled"
+        private const val KEY_AUTO_LOCK_TIMEOUT_MINUTES = "key_auto_lock_timeout_minutes"
+        private const val KEY_LAST_BACKGROUND_TIMESTAMP = "key_last_background_timestamp"
     }
 
     init {
@@ -320,6 +323,46 @@ class SecurityManager(private val context: Context) {
             .build()
 
         prompt.authenticate(promptInfo)
+    }
+
+    // ── Privacy Shield & Auto-Lock Settings ─────────────────────────────────
+
+    fun isPrivacyShieldEnabled(): Boolean {
+        return prefs.getBoolean(KEY_PRIVACY_SHIELD_ENABLED, true)
+    }
+
+    fun setPrivacyShieldEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PRIVACY_SHIELD_ENABLED, enabled).apply()
+    }
+
+    fun getAutoLockTimeoutMinutes(): Int {
+        return prefs.getInt(KEY_AUTO_LOCK_TIMEOUT_MINUTES, 1)
+    }
+
+    fun setAutoLockTimeoutMinutes(minutes: Int) {
+        prefs.edit().putInt(KEY_AUTO_LOCK_TIMEOUT_MINUTES, minutes).apply()
+    }
+
+    fun recordBackgroundTimestamp() {
+        prefs.edit().putLong(KEY_LAST_BACKGROUND_TIMESTAMP, System.currentTimeMillis()).apply()
+    }
+
+    fun resetBackgroundTimer() {
+        prefs.edit().remove(KEY_LAST_BACKGROUND_TIMESTAMP).apply()
+    }
+
+    fun shouldAutoLock(): Boolean {
+        val timeoutMinutes = getAutoLockTimeoutMinutes()
+        if (timeoutMinutes < 0) return false // Never auto-lock
+
+        val lastBgTime = prefs.getLong(KEY_LAST_BACKGROUND_TIMESTAMP, 0L)
+        if (lastBgTime <= 0L) return false
+
+        if (timeoutMinutes == 0) return true // Immediately on background
+
+        val elapsedMillis = System.currentTimeMillis() - lastBgTime
+        val timeoutMillis = timeoutMinutes * 60 * 1000L
+        return elapsedMillis >= timeoutMillis
     }
 
     private fun hashString(input: String): String {

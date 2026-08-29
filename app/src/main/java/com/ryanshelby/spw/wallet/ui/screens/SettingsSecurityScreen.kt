@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -126,6 +127,10 @@ fun SettingsSecurityScreen(
     isBiometricAvailable: Boolean,
     isBiometricEnabled: Boolean,
     isScramblePin: Boolean,
+    isPrivacyShieldEnabled: Boolean = securityManager.isPrivacyShieldEnabled(),
+    onTogglePrivacyShield: (Boolean) -> Unit = { securityManager.setPrivacyShieldEnabled(it) },
+    autoLockTimeoutMinutes: Int = securityManager.getAutoLockTimeoutMinutes(),
+    onSetAutoLockTimeout: (Int) -> Unit = { securityManager.setAutoLockTimeoutMinutes(it) },
     onBack: () -> Unit,
     onSetBiometricEnabled: (Boolean) -> Unit,
     onSetScramblePin: (Boolean) -> Unit,
@@ -440,6 +445,82 @@ fun SettingsSecurityScreen(
                                 uncheckedTrackColor = DarkSurfaceElevated
                             )
                         )
+                    }
+
+                    // App Switcher Privacy Shield Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("App Switcher Privacy Shield", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Mask balance & keys in Android recent apps", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Switch(
+                            checked = isPrivacyShieldEnabled,
+                            onCheckedChange = {
+                                HapticUtil.performKeyClick(context)
+                                onTogglePrivacyShield(it)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = DarkBackground,
+                                checkedTrackColor = TextPrimary,
+                                uncheckedThumbColor = TextMuted,
+                                uncheckedTrackColor = DarkSurfaceElevated
+                            )
+                        )
+                    }
+
+                    // Auto-Lock Security Timer Selector
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Security, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Auto-Lock Security Timer", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Lock wallet when minimized or in background", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(
+                                0 to "Immediately",
+                                1 to "1m",
+                                5 to "5m",
+                                15 to "15m",
+                                -1 to "Never"
+                            ).forEach { (timeout, label) ->
+                                val isSelected = autoLockTimeoutMinutes == timeout
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) SurfaceSubtle else DarkSurfaceElevated)
+                                        .border(0.8.dp, if (isSelected) TextPrimary else GlassCardBorder, RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            HapticUtil.performKeyClick(context)
+                                            onSetAutoLockTimeout(timeout)
+                                        }
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) TextPrimary else TextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     // Change PIN Row

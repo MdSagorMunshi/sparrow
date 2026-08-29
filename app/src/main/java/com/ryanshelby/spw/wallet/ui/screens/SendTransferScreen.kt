@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,17 +32,21 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -65,6 +71,7 @@ import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.security.QrUriParser
 import com.ryanshelby.spw.wallet.security.SPWCrypto
 import com.ryanshelby.spw.wallet.ui.components.FinanceCard
+import com.ryanshelby.spw.wallet.ui.components.Identicon
 import com.ryanshelby.spw.wallet.ui.components.PinPadView
 import com.ryanshelby.spw.wallet.ui.components.QrScannerDialog
 import com.ryanshelby.spw.wallet.ui.components.TransactionStatusOverlay
@@ -142,9 +149,11 @@ fun SendTransferScreen(
     }
 
     var selectedFeeSpeed by remember { mutableStateOf("Standard") }
+    var customGasFeeSpw by remember { mutableDoubleStateOf(0.0002) }
     val gasFeeSpw = when (selectedFeeSpeed) {
         "Economy" -> 0.00005
         "Fast" -> 0.0005
+        "Custom" -> customGasFeeSpw
         else -> 0.0001
     }
 
@@ -326,6 +335,48 @@ fun SendTransferScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
+            // Quick Send / Saved Recipients Bar
+            if (contacts.isNotEmpty()) {
+                Text(
+                    text = "QUICK SEND / RECENT RECIPIENTS",
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(contacts) { contact ->
+                        val isSelected = recipientAddress.equals(contact.address, ignoreCase = true)
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (isSelected) SurfaceElevated else SurfacePrimary)
+                                .border(0.8.dp, if (isSelected) TextPrimary else BorderSubtle, RoundedCornerShape(20.dp))
+                                .bouncyClickable {
+                                    HapticUtil.performKeyClick(context)
+                                    recipientAddress = contact.address
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Identicon(address = contact.address, size = 18.dp, shape = CircleShape)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = contact.name.ifBlank { contact.address.take(6) + "..." },
+                                color = if (isSelected) TextPrimary else TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             // Recipient Section
             Text(
                 text = "RECIPIENT ADDRESS",
@@ -344,6 +395,13 @@ fun SendTransferScreen(
                 isError = addressErrorMessage != null,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
+                leadingIcon = if (recipientAddress.isNotBlank()) {
+                    {
+                        Box(modifier = Modifier.padding(start = 12.dp, end = 4.dp)) {
+                            Identicon(address = recipientAddress, size = 22.dp, shape = RoundedCornerShape(6.dp))
+                        }
+                    }
+                } else null,
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -545,7 +603,12 @@ fun SendTransferScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("Economy" to 0.00005, "Standard" to 0.0001, "Fast" to 0.0005).forEach { (speed, fee) ->
+                listOf(
+                    "Economy" to 0.00005,
+                    "Standard" to 0.0001,
+                    "Fast" to 0.0005,
+                    "Custom" to customGasFeeSpw
+                ).forEach { (speed, fee) ->
                     val isSelected = selectedFeeSpeed == speed
                     FinanceCard(
                         modifier = Modifier
@@ -571,16 +634,153 @@ fun SendTransferScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             val formattedFee = java.text.NumberFormat.getInstance(java.util.Locale.US).apply { maximumFractionDigits = 8 }.format(fee)
-                            Text("$formattedFee SPW", color = TextPrimary, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                            Text("$formattedFee SPW", color = TextPrimary, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(26.dp))
+            // Custom Fee Slider
+            if (selectedFeeSpeed == "Custom") {
+                Spacer(modifier = Modifier.height(10.dp))
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Custom Gas Fee Tuning", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                text = String.format(Locale.US, "%.6f SPW", customGasFeeSpw),
+                                color = TextPrimary,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Slider(
+                            value = customGasFeeSpw.toFloat(),
+                            onValueChange = { customGasFeeSpw = (Math.round(it * 100000.0) / 100000.0).coerceAtLeast(0.00001) },
+                            valueRange = 0.00001f..0.00200f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = TextPrimary,
+                                activeTrackColor = TextPrimary,
+                                inactiveTrackColor = SurfaceElevated
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ═════════════════════════════════════════════════════════════════
+            // Transaction Summary & Net Deduction Breakdown Card
+            // ═════════════════════════════════════════════════════════════════
+            val totalDebited = amountValue + gasFeeSpw
+            val remainingBalance = (nativeToken.balance - totalDebited).coerceAtLeast(0.0)
+            val isOverBalance = totalDebited > nativeToken.balance
+
+            FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "FINANCIAL DEDUCTION BREAKDOWN",
+                            color = TextMuted,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "Live Estimate",
+                            color = TextSecondary,
+                            fontSize = 10.sp
+                        )
+                    }
+
+                    HorizontalDivider(color = BorderSubtle, thickness = 0.8.dp)
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Transfer Amount", color = TextSecondary, fontSize = 12.sp)
+                        Text(
+                            text = String.format(Locale.US, "%.8f", amountValue).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Network Gas Fee", color = TextSecondary, fontSize = 12.sp)
+                        Text(
+                            text = "- " + String.format(Locale.US, "%.8f", gasFeeSpw).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
+                            color = SemanticError,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Recipient Receives (Net)", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = String.format(Locale.US, "%.8f", amountValue).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
+                            color = SemanticPositive,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    HorizontalDivider(color = BorderSubtle, thickness = 0.8.dp)
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Total Debited from Wallet", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = String.format(Locale.US, "%.8f", totalDebited).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
+                            color = if (isOverBalance) SemanticError else TextPrimary,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Remaining Wallet Balance", color = TextMuted, fontSize = 11.sp)
+                        Text(
+                            text = String.format(Locale.US, "%.8f", if (isOverBalance) 0.0 else remainingBalance).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
+                            color = if (isOverBalance) SemanticError else TextSecondary,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    if (isOverBalance && amountValue > 0) {
+                        Text(
+                            text = "Insufficient balance: Total debited (${String.format(Locale.US, "%.8f", totalDebited)} SPW) exceeds your balance.",
+                            color = SemanticError,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Confirm Send Button
-            val isAmountValid = amountValue > 0 && amountValue <= (nativeToken.balance - gasFeeSpw).coerceAtLeast(0.0)
+            val isAmountValid = amountValue > 0 && !isOverBalance
             val isBtnEnabled = isAddressValid && isAmountValid && txOverlayState == TxOverlayState.HIDDEN
             Button(
                 onClick = {

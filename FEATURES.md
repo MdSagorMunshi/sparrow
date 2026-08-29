@@ -31,6 +31,19 @@
     - **Net Flow**: Dynamic net balance flow indicator.
     - **Total Transactions & Shielded Activity**: Complete ledger activity breakdown and stealth transaction count.
     - Explicit flip action button for one-tap transition between balance front and ledger back.
+- **Visual Identicons & Quick Send Recipients Bar**:
+  - Deterministic 5x5 symmetrical blockie/identicon generator hashing addresses and public keys with custom palettes.
+  - Quick Send carousel on the transfer screen aggregating saved contacts with 1-tap autofill.
+  - Identicon avatars dynamically rendered next to recipient inputs and transaction ledger rows.
+- **Advanced Gas Engine & Live Fee Deduction Breakdown**:
+  - Multi-tiered mining speed selectors (*Economy*, *Standard*, *Fast*) with custom feather/SPW gas slider.
+  - Comprehensive live financial deduction breakdown table displaying Transfer Amount, Network Gas Fee, Net Amount Received, Total Debited from Wallet, and Estimated Remaining Balance with real-time balance overdraft protection.
+- **App Switcher Privacy Shield & Auto-Lock Security Timer**:
+  - Banking-grade `FLAG_SECURE` integration masking private keys, seeds, and balance data from recent apps switcher and screen capture.
+  - Configurable auto-lock background timer (*Immediately*, *1m*, *5m*, *15m*, *Never*) locking the wallet when minimized.
+- **Transaction CSV & Tax Ledger Export**:
+  - One-tap standard accounting CSV ledger export compatible with tax reporting software (CoinTracker, Koinly).
+  - Secure native Android share sheet integration via Android `FileProvider`.
 - **Institutional Key & Scanner Utilities**:
   - High-contrast isolated QR plate with instant haptic clipboard feedback and stealth key disclosure.
   - Minimalist viewfinder reticle with hairline white corner brackets in QR camera scanner.
