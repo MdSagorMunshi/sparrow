@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Shield
@@ -75,6 +76,7 @@ import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
 import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
 import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
 import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
 import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
@@ -96,6 +98,7 @@ fun SendTransferScreen(
     contacts: List<ContactEntity>,
     network: NetworkConfig,
     activeLanguage: AppLanguage,
+    walletAddress: String = "",
     onBack: () -> Unit,
     onConfirmSend: suspend (tokenSymbol: String, toAddress: String, amount: Double, gasFee: Double, memo: String, isStealth: Boolean, recipientViewPubHex: String?) -> Result<String>,
     onVerifyPin: (String) -> Boolean,
@@ -156,6 +159,48 @@ fun SendTransferScreen(
 
     val amountValue = amountText.toDoubleOrNull() ?: 0.0
     val amountFeathers = (amountValue * SPWCrypto.FEATHERS_PER_SPW).toLong()
+
+    // Address & Self-Send Validation
+    val isSelfSend = remember(recipientAddress, walletAddress) {
+        recipientAddress.isNotBlank() && walletAddress.isNotBlank() &&
+                recipientAddress.trim().equals(walletAddress.trim(), ignoreCase = true)
+    }
+
+    val isAddressValidFormat = remember(recipientAddress, isStealthTransfer) {
+        if (recipientAddress.isBlank()) true
+        else if (isStealthTransfer) {
+            val clean = recipientAddress.trim()
+            clean.length == 66 && (clean.startsWith("02") || clean.startsWith("03")) &&
+                    clean.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+        } else {
+            SPWCrypto.isValidSpwAddress(recipientAddress.trim())
+        }
+    }
+
+    val isStealthViewKeyValid = remember(recipientViewPub, isStealthTransfer) {
+        if (!isStealthTransfer || recipientViewPub.isBlank()) true
+        else {
+            val clean = recipientViewPub.trim()
+            clean.length == 66 && (clean.startsWith("02") || clean.startsWith("03")) &&
+                    clean.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+        }
+    }
+
+    val addressErrorMessage = when {
+        recipientAddress.isBlank() -> null
+        isSelfSend -> "Cannot send tokens to your own wallet address."
+        !isAddressValidFormat -> if (isStealthTransfer) {
+            "Invalid Spend Public Key (must be 66-character compressed hex starting with 02 or 03)."
+        } else {
+            "Invalid SPW wallet address. Tokens cannot be sent."
+        }
+        isStealthTransfer && recipientViewPub.isNotBlank() && !isStealthViewKeyValid -> {
+            "Invalid Recipient View Public Key (must be 66-character compressed hex)."
+        }
+        else -> null
+    }
+
+    val isAddressValid = recipientAddress.isNotBlank() && addressErrorMessage == null
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -296,6 +341,7 @@ fun SendTransferScreen(
                 onValueChange = { recipientAddress = it.trim() },
                 placeholder = { Text(if (isStealthTransfer) "Recipient Spend Public Key" else "Recipient address", color = TextMuted, fontSize = 13.sp) },
                 singleLine = true,
+                isError = addressErrorMessage != null,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 trailingIcon = {
@@ -320,12 +366,38 @@ fun SendTransferScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = SurfacePrimary,
                     unfocusedContainerColor = SurfacePrimary,
-                    focusedBorderColor = BorderStrong,
-                    unfocusedBorderColor = BorderSubtle,
+                    focusedBorderColor = if (addressErrorMessage != null) SemanticError else BorderStrong,
+                    unfocusedBorderColor = if (addressErrorMessage != null) SemanticError else BorderSubtle,
+                    errorBorderColor = SemanticError,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary
                 )
             )
+
+            if (addressErrorMessage != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = "Address Error",
+                        tint = SemanticError,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = addressErrorMessage,
+                        color = SemanticError,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
 
             // Stealth Transfer Toggle & Recipient View Key input
             Spacer(modifier = Modifier.height(12.dp))
@@ -508,7 +580,8 @@ fun SendTransferScreen(
             Spacer(modifier = Modifier.height(26.dp))
 
             // Confirm Send Button
-            val isBtnEnabled = recipientAddress.isNotBlank() && amountValue > 0 && txOverlayState == TxOverlayState.HIDDEN
+            val isAmountValid = amountValue > 0 && amountValue <= (nativeToken.balance - gasFeeSpw).coerceAtLeast(0.0)
+            val isBtnEnabled = isAddressValid && isAmountValid && txOverlayState == TxOverlayState.HIDDEN
             Button(
                 onClick = {
                     HapticUtil.lightTap(context)

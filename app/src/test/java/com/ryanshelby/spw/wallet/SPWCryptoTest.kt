@@ -42,4 +42,26 @@ class SPWCryptoTest {
         assertTrue(keyPair.spendPubHex.isNotEmpty())
         assertTrue(keyPair.viewPubHex.isNotEmpty())
     }
+
+    @Test
+    fun testAddressValidation() {
+        val mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        val account = SPWCrypto.createAccountFromMnemonic(mnemonic)
+        val validAddress = account.address
+
+        // Valid address should pass
+        assertTrue(SPWCrypto.isValidSpwAddress(validAddress))
+
+        // Invalid addresses should fail
+        org.junit.Assert.assertFalse(SPWCrypto.isValidSpwAddress(""))
+        org.junit.Assert.assertFalse(SPWCrypto.isValidSpwAddress("invalid_address_string"))
+        org.junit.Assert.assertFalse(SPWCrypto.isValidSpwAddress("111111111111111111111111"))
+        org.junit.Assert.assertFalse(SPWCrypto.isValidSpwAddress(validAddress.dropLast(1) + "X")) // Bad checksum
+
+        // Self-send comparison test
+        val ownAddress = validAddress
+        val recipientAddress = validAddress.lowercase()
+        val isSelfSend = ownAddress.trim().equals(recipientAddress.trim(), ignoreCase = true)
+        assertTrue(isSelfSend)
+    }
 }

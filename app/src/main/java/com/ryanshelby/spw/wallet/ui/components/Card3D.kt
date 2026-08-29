@@ -3,6 +3,7 @@ package com.ryanshelby.spw.wallet.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.ryanshelby.spw.wallet.data.model.NetworkConfig
+import com.ryanshelby.spw.wallet.data.model.TransactionItem
 
 /**
  * Compatibility delegate for Holographic3DCard -> PortfolioOverviewCard.
@@ -15,6 +16,7 @@ fun Holographic3DCard(
     walletAddress: String,
     totalBalanceSpw: Double,
     totalBalanceFeathers: Long,
+    transactions: List<TransactionItem> = emptyList(),
     network: NetworkConfig,
     hideBalance: Boolean,
     onToggleHideBalance: () -> Unit,
@@ -29,6 +31,7 @@ fun Holographic3DCard(
         walletAddress = walletAddress,
         totalBalanceSpw = totalBalanceSpw,
         totalBalanceFeathers = totalBalanceFeathers,
+        transactions = transactions,
         network = network,
         hideBalance = hideBalance,
         onToggleHideBalance = onToggleHideBalance,

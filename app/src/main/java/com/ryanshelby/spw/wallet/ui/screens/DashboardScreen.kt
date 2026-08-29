@@ -150,6 +150,7 @@ fun DashboardScreen(
                 walletAddress = walletAddress,
                 totalBalanceSpw = totalBalanceSpw,
                 totalBalanceFeathers = totalBalanceFeathers,
+                transactions = transactions,
                 network = network,
                 hideBalance = hideBalance,
                 onToggleHideBalance = onToggleHideBalance,

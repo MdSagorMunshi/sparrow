@@ -370,6 +370,7 @@ class MainActivity : FragmentActivity() {
                                     contacts = contacts,
                                     network = activeNetwork,
                                     activeLanguage = activeLanguage,
+                                    walletAddress = securityManager.getWalletAddress(),
                                     onBack = { navController.popBackStack() },
                                     onConfirmSend = { tokenSymbol, toAddress, amount, gasFee, memo, isStealth, recipientViewPubHex ->
                                         repository.sendTransfer(

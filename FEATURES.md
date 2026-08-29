@@ -17,6 +17,20 @@
   - Sequential staggered entrance animations (`Modifier.staggeredEntrance`) on list cards and history items.
 - **Bone-Matching Skeleton Loading States**:
   - Subtle sweeping shimmer loaders (`SkeletonShimmer`) matching exact transaction row geometry to eliminate layout shifts during RPC network sync.
+- **Invalid Wallet Address & Self-Send Detector**:
+  - Real-time cryptographic address validation verifying Base58 encoding, 25-byte structure, version byte, and double SHA-256 checksums.
+  - Rejection of invalid addresses and compressed public keys with immediate inline error banners (`"Invalid SPW wallet address. Tokens cannot be sent."`).
+  - Active self-send prevention blocking users from accidentally sending funds to their own active address (`"Cannot send tokens to your own wallet address."`).
+  - Strict UI guardrails that automatically disable the send broadcast action button until a valid recipient address is provided.
+- **Dashboard 3D Flippable Card with Backside Financial Ledger**:
+  - Multi-directional swipe gesture support (swiping left, right, up, or down) with tactile haptic feedback.
+  - Realistic 3D card perspective rotation (`graphicsLayer` with depth perspective).
+  - Backside financial metrics overview displaying:
+    - **Total Received**: Live accumulated inbound funds (`+SPW` in emerald) with deposit count.
+    - **Total Spent**: Live accumulated outbound funds (`-SPW` in red) with transfer count.
+    - **Net Flow**: Dynamic net balance flow indicator.
+    - **Total Transactions & Shielded Activity**: Complete ledger activity breakdown and stealth transaction count.
+    - Explicit flip action button for one-tap transition between balance front and ledger back.
 - **Institutional Key & Scanner Utilities**:
   - High-contrast isolated QR plate with instant haptic clipboard feedback and stealth key disclosure.
   - Minimalist viewfinder reticle with hairline white corner brackets in QR camera scanner.
