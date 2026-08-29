@@ -293,9 +293,14 @@ fun Holographic3DCard(
                         Text(
                             text = "Syncing Node...",
                             style = MaterialTheme.typography.displaySmall,
-                            color = CyanNeon.copy(alpha = 0.7f),
+                            color = CyanNeon.copy(alpha = 0.8f),
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        Text(
+                            text = "Fetching on-chain balance…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
                         )
                     } else {
                         Text(
@@ -305,17 +310,17 @@ fun Holographic3DCard(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp
                         )
+                        val formattedFeathers = NumberFormat.getNumberInstance(Locale.US).format(
+                            if (totalBalanceFeathers > 0) totalBalanceFeathers else (totalBalanceSpw * SPWCrypto.FEATHERS_PER_SPW).toLong()
+                        )
+                        Text(
+                            text = "$formattedFeathers Feathers",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CyanNeon,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Monospace
+                        )
                     }
-                    val formattedFeathers = NumberFormat.getNumberInstance(Locale.US).format(
-                        if (totalBalanceFeathers > 0) totalBalanceFeathers else (totalBalanceSpw * SPWCrypto.FEATHERS_PER_SPW).toLong()
-                    )
-                    Text(
-                        text = "$formattedFeathers Feathers",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CyanNeon,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace
-                    )
                 }
             }
 

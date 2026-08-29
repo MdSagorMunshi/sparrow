@@ -34,11 +34,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import com.ryanshelby.spw.wallet.data.local.AppDataStore
 import com.ryanshelby.spw.wallet.security.SecureKeyStorage
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import kotlinx.coroutines.sync.Mutex
 
 class WalletRepository(
     private val context: Context,
@@ -66,7 +67,8 @@ class WalletRepository(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    private val refreshMutex = Mutex()
+    private var activeSyncJob: Job? = null
+    private var periodicSyncJob: Job? = null
 
     val accountsFlow: Flow<List<AccountEntity>> = walletDao.getAllAccounts()
 
@@ -216,6 +218,12 @@ class WalletRepository(
     }
 
     suspend fun resetWalletData() {
+        periodicSyncJob?.cancel()
+        periodicSyncJob = null
+        activeSyncJob?.cancel()
+        activeSyncJob = null
+        _isRefreshing.value = false
+
         // Clear Room database
         walletDao.clearAccounts()
         walletDao.clearTransactions()
@@ -272,12 +280,15 @@ class WalletRepository(
             walletDao.insertAccount(account)
         }
 
-        // Initialize single native SPW token entity with 0 initial balance until on-chain sync
+        // Initialize single native SPW token entity with cached balance or 0
+        val cached = securityManager.getCachedBalance(myAddress)
+        val initialBalance = cached?.first ?: 0.0
+        val initialFeathers = cached?.second ?: 0L
         val nativeToken = TokenEntity(
             symbol = "SPW",
             name = "Sparrow",
-            balance = 0.0,
-            feathers = 0L,
+            balance = initialBalance,
+            feathers = initialFeathers,
             decimals = 8,
             isNative = true,
             network = _activeNetwork.value.name,
@@ -287,108 +298,133 @@ class WalletRepository(
     }
 
     suspend fun refreshOnChainData() {
-        if (!refreshMutex.tryLock()) return
+        val address = securityManager.getWalletAddress()
+        if (address.isEmpty() || !SPWCrypto.isValidSpwAddress(address)) return
+        doRefresh(address)
+    }
+
+    private suspend fun doRefresh(address: String) {
+        if (address.isEmpty() || !SPWCrypto.isValidSpwAddress(address)) return
+        _isRefreshing.value = true
         try {
-            _isRefreshing.value = true
-            val address = securityManager.getWalletAddress()
-        if (address.isEmpty() || !SPWCrypto.isValidSpwAddress(address)) {
-            _isRefreshing.value = false
-            return
-        }
+            apiClient.setNodeUrl(_activeNetwork.value.rpcUrl)
 
-        apiClient.setNodeUrl(_activeNetwork.value.rpcUrl)
+            // 1. Fetch live balance from SPW node and update DB immediately
+            val balanceResult = apiClient.getBalance(address)
+            if (securityManager.getWalletAddress() != address) return
 
-        // 1. Fetch live balance from SPW node
-        val balanceResult = apiClient.getBalance(address)
-        if (balanceResult.isSuccess) {
-            val bal = balanceResult.getOrNull()
-            if (bal != null) {
-                // Prevent node's outdated balance from overwriting our locally deducted balance
-                val pendingSends = walletDao.getAllTransactionsSync().filter {
-                    (it.type == "SEND" || it.type == "STEALTH") && it.status == "PENDING"
-                }
-                
-                if (pendingSends.isEmpty()) {
-                    walletDao.updateNativeBalance(bal.balanceSpw, bal.balanceFeathers)
+            if (balanceResult.isSuccess) {
+                val bal = balanceResult.getOrNull()
+                if (bal != null) {
+                    // Check pending sends ONLY for this specific address, and only if recent (< 30 seconds)
+                    val recentPendingSends = walletDao.getAllTransactionsSync().filter {
+                        it.fromAddress == address &&
+                        (it.type == "SEND" || it.type == "STEALTH") &&
+                        it.status == "PENDING" &&
+                        (System.currentTimeMillis() - it.timestamp) < 30_000L
+                    }
+
+                    val currentLocal = walletDao.getNativeTokenSync()
+                    val shouldUpdate = if (recentPendingSends.isNotEmpty() && currentLocal != null) {
+                        bal.balanceFeathers <= currentLocal.feathers
+                    } else {
+                        true
+                    }
+
+                    if (shouldUpdate && securityManager.getWalletAddress() == address) {
+                        walletDao.updateNativeBalance(bal.balanceSpw, bal.balanceFeathers)
+                        securityManager.setCachedBalance(address, bal.balanceSpw, bal.balanceFeathers)
+                    }
                 }
             }
-        }
 
-        // 2. Fetch live UTXOs
-        val utxosResult = apiClient.getUtxos(address)
-        if (utxosResult.isSuccess) {
-            _liveUtxos.value = utxosResult.getOrNull() ?: emptyList()
-        }
+            // 2. Fetch live UTXOs
+            val utxosResult = apiClient.getUtxos(address)
+            if (securityManager.getWalletAddress() != address) return
+            if (utxosResult.isSuccess) {
+                _liveUtxos.value = utxosResult.getOrNull() ?: emptyList()
+            }
 
-        // 3. Fetch on-chain Explorer history
-        val explorerResult = apiClient.getExplorer(address)
-        if (explorerResult.isSuccess) {
-            val exp = explorerResult.getOrNull()
-            if (exp != null && exp.transactions.isNotEmpty()) {
-                val existingTxHashes = walletDao.getAllTransactionsSync().map { it.txHash }.toSet()
+            // 3. Fetch on-chain Explorer history
+            val explorerResult = apiClient.getExplorer(address)
+            if (securityManager.getWalletAddress() != address) return
+            if (explorerResult.isSuccess) {
+                val exp = explorerResult.getOrNull()
+                if (exp != null && exp.transactions.isNotEmpty()) {
+                    val existingTxHashes = walletDao.getAllTransactionsSync().map { it.txHash }.toSet()
 
-                val dbTxs = exp.transactions.map { tx ->
-                    val isIncoming = tx.outputs.any { it.address == address }
-                    val outputForMe = tx.outputs.firstOrNull { it.address == address }
-                    val amountFeathers = if (isIncoming) {
-                        outputForMe?.amount ?: 0L
-                    } else {
-                        tx.outputs.filter { it.address != address }.sumOf { it.amount }
+                    val dbTxs = exp.transactions.map { tx ->
+                        val isIncoming = tx.outputs.any { it.address == address }
+                        val outputForMe = tx.outputs.firstOrNull { it.address == address }
+                        val amountFeathers = if (isIncoming) {
+                            outputForMe?.amount ?: 0L
+                        } else {
+                            tx.outputs.filter { it.address != address }.sumOf { it.amount }
+                        }
+                        val amountSpw = amountFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
+
+                        TransactionEntity(
+                            txHash = tx.txid,
+                            type = if (tx.txPubkey != null && tx.txPubkey.isNotEmpty()) "STEALTH" else if (isIncoming) "RECEIVE" else "SEND",
+                            fromAddress = tx.inputs.firstOrNull()?.pubkey?.let { pk ->
+                                try { SPWCrypto.pubkeyToAddress(SPWCrypto.hexToBytes(pk)) } catch (e: Exception) { pk }
+                            } ?: "Network",
+                            toAddress = tx.outputs.firstOrNull()?.address ?: address,
+                            amountSpw = amountSpw,
+                            amountFeathers = amountFeathers,
+                            tokenSymbol = "SPW",
+                            timestamp = if (tx.timestamp > 0) tx.timestamp * 1000L else System.currentTimeMillis(),
+                            status = "CONFIRMED",
+                            feeSpw = 0.0001,
+                            memo = if (tx.txPubkey != null && tx.txPubkey.isNotEmpty()) "Stealth Shielded Transfer" else "SPW On-Chain Transfer",
+                            blockNumber = tx.blockHeight ?: 1L,
+                            txPubkey = tx.txPubkey,
+                            merkleRoot = SPWCrypto.sha256Hex("merkle:${tx.txid}"),
+                            bits = "1a0${tx.txid.take(5)}",
+                            confirmations = ((tx.blockHeight ?: 1L) % 500 + 6).toInt(),
+                            nonce = tx.txid.take(8).toLongOrNull(16) ?: 0L
+                        )
                     }
-                    val amountSpw = amountFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
+                    if (securityManager.getWalletAddress() == address) {
+                        walletDao.insertTransactions(dbTxs)
 
-                    TransactionEntity(
-                        txHash = tx.txid,
-                        type = if (tx.txPubkey != null && tx.txPubkey.isNotEmpty()) "STEALTH" else if (isIncoming) "RECEIVE" else "SEND",
-                        fromAddress = tx.inputs.firstOrNull()?.pubkey?.let { pk ->
-                            try { SPWCrypto.pubkeyToAddress(SPWCrypto.hexToBytes(pk)) } catch (e: Exception) { pk }
-                        } ?: "Network",
-                        toAddress = tx.outputs.firstOrNull()?.address ?: address,
-                        amountSpw = amountSpw,
-                        amountFeathers = amountFeathers,
-                        tokenSymbol = "SPW",
-                        timestamp = if (tx.timestamp > 0) tx.timestamp * 1000L else System.currentTimeMillis(),
-                        status = "CONFIRMED",
-                        feeSpw = 0.0001,
-                        memo = if (tx.txPubkey != null && tx.txPubkey.isNotEmpty()) "Stealth Shielded Transfer" else "SPW On-Chain Transfer",
-                        blockNumber = tx.blockHeight ?: 1L,
-                        txPubkey = tx.txPubkey,
-                        merkleRoot = SPWCrypto.sha256Hex("merkle:${tx.txid}"),
-                        bits = "1a0${tx.txid.take(5)}",
-                        confirmations = ((tx.blockHeight ?: 1L) % 500 + 6).toInt(),
-                        nonce = tx.txid.take(8).toLongOrNull(16) ?: 0L
-                    )
-                }
-                walletDao.insertTransactions(dbTxs)
-                
-                val activeAccount = walletDao.getAccountByAddress(address)
-                val cutoffTime = (activeAccount?.createdAt ?: System.currentTimeMillis()) - 60000L // 1 minute buffer for edge cases
+                        val activeAccount = walletDao.getAccountByAddress(address)
+                        val cutoffTime = (activeAccount?.createdAt ?: System.currentTimeMillis()) - 60000L // 1 minute buffer for edge cases
 
-                dbTxs.forEach { tx ->
-                    if (!existingTxHashes.contains(tx.txHash) && tx.toAddress == address && tx.fromAddress != address) {
-                        if (tx.timestamp >= cutoffTime) {
-                            notificationService.showIncomingTransferNotification(
-                                amount = tx.amountSpw,
-                                symbol = tx.tokenSymbol,
-                                fromAddress = tx.fromAddress
-                            )
+                        dbTxs.forEach { tx ->
+                            if (!existingTxHashes.contains(tx.txHash) && tx.toAddress == address && tx.fromAddress != address) {
+                                if (tx.timestamp >= cutoffTime) {
+                                    notificationService.showIncomingTransferNotification(
+                                        amount = tx.amountSpw,
+                                        symbol = tx.tokenSymbol,
+                                        fromAddress = tx.fromAddress
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-
         } finally {
-            _isRefreshing.value = false
-            refreshMutex.unlock()
+            if (securityManager.getWalletAddress() == address) {
+                _isRefreshing.value = false
+            }
         }
     }
 
     private fun startPeriodicSync() {
-        repositoryScope.launch {
-            while (true) {
+        if (periodicSyncJob?.isActive == true) return
+        periodicSyncJob = repositoryScope.launch {
+            while (isActive) {
                 delay(2000) // Poll blockchain every 2s
-                refreshOnChainData()
+                val activeAddress = securityManager.getWalletAddress()
+                if (activeAddress.isNotEmpty() && SPWCrypto.isValidSpwAddress(activeAddress)) {
+                    if (activeSyncJob?.isActive != true) {
+                        activeSyncJob = launch {
+                            doRefresh(activeAddress)
+                        }
+                    }
+                }
             }
         }
     }
@@ -572,6 +608,7 @@ class WalletRepository(
                 val newFeathers = currentToken.feathers - neededFeathers
                 val newSpw = newFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
                 walletDao.updateNativeBalance(newSpw, newFeathers)
+                securityManager.setCachedBalance(myAddress, newSpw, newFeathers)
             }
 
             // Trigger notification
@@ -659,9 +696,8 @@ class WalletRepository(
     }
 
     suspend fun switchActiveAccount(account: AccountEntity) {
-        // Clear previous account state from DB
-        walletDao.clearTransactions()
-        walletDao.clearTokens()
+        // Cancel any in-flight sync for the previous account
+        activeSyncJob?.cancel()
 
         securityManager.setWalletName(account.name)
         if (account.mnemonic != null) {
@@ -671,12 +707,16 @@ class WalletRepository(
         }
         walletDao.setActiveAccount(account.id)
         
-        // Re-initialize a blank native token for the new active account
+        // Immediately restore this account's cached balance into the native token so UI updates instantly
+        val cached = securityManager.getCachedBalance(account.address)
+        val initialBalance = cached?.first ?: 0.0
+        val initialFeathers = cached?.second ?: 0L
+
         val nativeToken = TokenEntity(
             symbol = "SPW",
             name = "Sparrow",
-            balance = 0.0,
-            feathers = 0L,
+            balance = initialBalance,
+            feathers = initialFeathers,
             decimals = 8,
             isNative = true,
             network = _activeNetwork.value.name,
@@ -684,7 +724,10 @@ class WalletRepository(
         )
         walletDao.insertTokens(listOf(nativeToken))
         
-        refreshOnChainData()
+        // Launch immediate fresh sync for the new active account
+        activeSyncJob = repositoryScope.launch {
+            doRefresh(account.address)
+        }
     }
 
 

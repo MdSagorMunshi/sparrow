@@ -45,7 +45,7 @@ class SecurityManager(private val context: Context) {
     }
 
     fun deleteWallet() {
-        prefs.edit()
+        val editor = prefs.edit()
             .remove(KEY_PIN_HASH)
             .remove(KEY_WALLET_ADDRESS)
             .remove(KEY_SEED_PHRASE)
@@ -54,8 +54,26 @@ class SecurityManager(private val context: Context) {
             .remove(KEY_SPEND_PUB_HEX)
             .remove(KEY_VIEW_PUB_HEX)
             .remove(KEY_WALLET_NAME)
-            .apply()
+        prefs.all.keys.filter { it.startsWith("cached_bal_") }.forEach {
+            editor.remove(it)
+        }
+        editor.apply()
         SecureKeyStorage.clearAllSecureKeys(context)
+    }
+
+    fun getCachedBalance(address: String): Pair<Double, Long>? {
+        if (address.isBlank()) return null
+        val raw = prefs.getString("cached_bal_$address", null) ?: return null
+        val parts = raw.split(":")
+        if (parts.size != 2) return null
+        val spw = parts[0].toDoubleOrNull() ?: return null
+        val feathers = parts[1].toLongOrNull() ?: return null
+        return Pair(spw, feathers)
+    }
+
+    fun setCachedBalance(address: String, spw: Double, feathers: Long) {
+        if (address.isBlank()) return
+        prefs.edit().putString("cached_bal_$address", "$spw:$feathers").apply()
     }
 
     fun isPinSet(): Boolean = prefs.getString(KEY_PIN_HASH, null) != null
