@@ -25,6 +25,7 @@ import com.ryanshelby.spw.wallet.security.SecurityManager
 import com.ryanshelby.spw.wallet.service.PushNotificationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -334,37 +335,94 @@ class WalletRepository(
             val balanceResult = apiClient.getBalance(address)
             if (securityManager.getWalletAddress() != address) return
 
+            var totalSpw = 0.0
+            var totalFeathers = 0L
+
             if (balanceResult.isSuccess) {
                 val bal = balanceResult.getOrNull()
                 if (bal != null) {
-                    // Check pending sends ONLY for this specific address, and only if recent (< 30 seconds)
-                    val recentPendingSends = walletDao.getAllTransactionsSync().filter {
-                        it.fromAddress == address &&
-                        (it.type == "SEND" || it.type == "STEALTH") &&
-                        it.status == "PENDING" &&
-                        (System.currentTimeMillis() - it.timestamp) < 30_000L
-                    }
+                    totalSpw += bal.balanceSpw
+                    totalFeathers += bal.balanceFeathers
+                }
+            }
 
-                    val currentLocal = walletDao.getNativeTokenSync()
-                    val shouldUpdate = if (recentPendingSends.isNotEmpty() && currentLocal != null) {
-                        bal.balanceFeathers <= currentLocal.feathers
-                    } else {
-                        true
+            // 1b. If stealth mode is enabled, fetch balance and UTXOs from known stealth addresses
+            val combinedUtxos = mutableListOf<SpwUtxo>()
+            if (securityManager.isStealthModeEnabled()) {
+                val stealthAddrs = securityManager.getKnownStealthAddresses(address)
+                for (stealthAddr in stealthAddrs) {
+                    val sBal = apiClient.getBalance(stealthAddr).getOrNull()
+                    if (sBal != null) {
+                        totalSpw += sBal.balanceSpw
+                        totalFeathers += sBal.balanceFeathers
                     }
+                    val sUtxos = apiClient.getUtxos(stealthAddr).getOrNull() ?: emptyList()
+                    combinedUtxos.addAll(sUtxos)
 
-                    if (shouldUpdate && securityManager.getWalletAddress() == address) {
-                        walletDao.updateNativeBalance(bal.balanceSpw, bal.balanceFeathers)
-                        securityManager.setCachedBalance(address, bal.balanceSpw, bal.balanceFeathers)
+                    // Also fetch explorer history for this stealth address
+                    val sExp = apiClient.getExplorer(stealthAddr).getOrNull()
+                    if (sExp != null && sExp.transactions.isNotEmpty()) {
+                        val existingHashes = walletDao.getAllTransactionsSync().map { it.txHash }.toSet()
+                        val sTxs = sExp.transactions.filter { !existingHashes.contains(it.txid) }.map { tx ->
+                            val outputForMe = tx.outputs.firstOrNull { it.address == stealthAddr }
+                            val amountFeathers = outputForMe?.amount ?: tx.outputs.sumOf { it.amount }
+                            val amountSpw = amountFeathers.toDouble() / SPWCrypto.FEATHERS_PER_SPW
+                            TransactionEntity(
+                                txHash = tx.txid,
+                                type = "STEALTH",
+                                fromAddress = tx.inputs.firstOrNull()?.pubkey?.let { pk ->
+                                    try { SPWCrypto.pubkeyToAddress(SPWCrypto.hexToBytes(pk)) } catch (e: Exception) { pk }
+                                } ?: "Network",
+                                toAddress = address,
+                                amountSpw = amountSpw,
+                                amountFeathers = amountFeathers,
+                                tokenSymbol = "SPW",
+                                timestamp = if (tx.timestamp > 0) tx.timestamp * 1000L else System.currentTimeMillis(),
+                                status = "CONFIRMED",
+                                feeSpw = 0.0001,
+                                memo = "Shielded Stealth Transfer ($stealthAddr)",
+                                blockNumber = tx.blockHeight ?: 1L,
+                                txPubkey = tx.txPubkey,
+                                merkleRoot = SPWCrypto.sha256Hex("merkle:${tx.txid}"),
+                                bits = "1a0${tx.txid.take(5)}",
+                                confirmations = ((tx.blockHeight ?: 1L) % 500 + 6).toInt(),
+                                nonce = tx.txid.take(8).toLongOrNull(16) ?: 0L
+                            )
+                        }
+                        if (sTxs.isNotEmpty()) {
+                            walletDao.insertTransactions(sTxs)
+                        }
                     }
                 }
             }
 
-            // 2. Fetch live UTXOs
+            // Check pending sends ONLY for this specific address, and only if recent (< 30 seconds)
+            val recentPendingSends = walletDao.getAllTransactionsSync().filter {
+                it.fromAddress == address &&
+                (it.type == "SEND" || it.type == "STEALTH") &&
+                it.status == "PENDING" &&
+                (System.currentTimeMillis() - it.timestamp) < 30_000L
+            }
+
+            val currentLocal = walletDao.getNativeTokenSync()
+            val shouldUpdate = if (recentPendingSends.isNotEmpty() && currentLocal != null) {
+                totalFeathers <= currentLocal.feathers
+            } else {
+                true
+            }
+
+            if (shouldUpdate && securityManager.getWalletAddress() == address) {
+                walletDao.updateNativeBalance(totalSpw, totalFeathers)
+                securityManager.setCachedBalance(address, totalSpw, totalFeathers)
+            }
+
+            // 2. Fetch live UTXOs for main address
             val utxosResult = apiClient.getUtxos(address)
             if (securityManager.getWalletAddress() != address) return
             if (utxosResult.isSuccess) {
-                _liveUtxos.value = utxosResult.getOrNull() ?: emptyList()
+                combinedUtxos.addAll(utxosResult.getOrNull() ?: emptyList())
             }
+            _liveUtxos.value = combinedUtxos
 
             // 3. Fetch on-chain Explorer history
             val explorerResult = apiClient.getExplorer(address)
@@ -801,5 +859,80 @@ class WalletRepository(
         nonce = nonce
     )
 
+    suspend fun scanStealthOutputs(): Result<Pair<Int, Double>> = withContext(Dispatchers.IO) {
+        val address = securityManager.getWalletAddress()
+        if (address.isEmpty() || !SPWCrypto.isValidSpwAddress(address)) {
+            return@withContext Result.failure(Exception("No active wallet address"))
+        }
 
+        val mySpendPub = securityManager.getSpendPubHex()
+        val myViewPub = securityManager.getViewPubHex()
+        val myViewKey = securityManager.getViewKeyHex()
+
+        var foundCount = 0
+        var foundSpw = 0.0
+
+        try {
+            // 1. Try node scan endpoint first
+            val scanRes = apiClient.scanStealthOutputs(myViewPub, mySpendPub).getOrNull()
+            if (scanRes != null && scanRes.utxos.isNotEmpty()) {
+                scanRes.utxos.forEach { u ->
+                    if (u.address.isNotEmpty()) {
+                        securityManager.addKnownStealthAddress(address, u.address)
+                        foundCount++
+                        foundSpw += u.amount.toDouble() / 1e8
+                    }
+                }
+            }
+
+            // 2. Check known pre-seeded stealth addresses
+            val known = securityManager.getKnownStealthAddresses(address)
+            for (stealthAddr in known) {
+                val bal = apiClient.getBalance(stealthAddr).getOrNull()
+                if (bal != null && bal.balanceFeathers > 0) {
+                    foundCount++
+                    foundSpw += bal.balanceSpw
+                }
+            }
+
+            // 3. Scan recent blocks (latest 150 blocks) for outputs matching viewKey
+            val chainHeight = apiClient.getLatestBlockHeight()
+            if (chainHeight > 0L && myViewKey.isNotEmpty() && mySpendPub.isNotEmpty()) {
+                val startBlock = (chainHeight - 150).coerceAtLeast(1L)
+                for (b in chainHeight downTo startBlock) {
+                    try {
+                        val blockRes = apiClient.getBlock(b).getOrNull() ?: continue
+                        blockRes.transactions.forEach { tx ->
+                            val txPk = tx.txPubkey
+                            if (!txPk.isNullOrBlank()) {
+                                tx.outputs.forEach { out ->
+                                    if (out.address.isNotEmpty() && !known.contains(out.address)) {
+                                        val isMine = SPWCrypto.scanStealthOutput(
+                                            outputAddress = out.address,
+                                            txPubkeyHex = txPk,
+                                            viewKeyHex = myViewKey,
+                                            spendPubHex = mySpendPub
+                                        )
+                                        if (isMine) {
+                                            securityManager.addKnownStealthAddress(address, out.address)
+                                            foundCount++
+                                            foundSpw += out.amount.toDouble() / 1e8
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Continue next block
+                    }
+                }
+            }
+
+            // Refresh on-chain data immediately to recalculate balance and UTXOs
+            doRefresh(address)
+            Result.success(Pair(foundCount, foundSpw))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

@@ -57,6 +57,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -137,7 +139,8 @@ fun SettingsSecurityScreen(
     onSwitchAccount: suspend (account: AccountEntity) -> Unit,
     onVerifyPin: (String) -> Boolean,
     onTriggerBiometric: (onSuccess: () -> Unit) -> Unit,
-    onResetWallet: suspend () -> Unit = {}
+    onResetWallet: suspend () -> Unit = {},
+    onScanStealthOutputs: suspend () -> Result<Pair<Int, Double>> = { Result.success(Pair(0, 0.0)) }
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -678,6 +681,147 @@ fun SettingsSecurityScreen(
                                 ) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = RedCoral, modifier = Modifier.size(16.dp))
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SECTION: ADVANCED / STEALTH ADDRESS MODE
+            SectionHeader(title = "ADVANCED")
+
+            var isStealthEnabled by remember { mutableStateOf(securityManager.isStealthModeEnabled()) }
+            var isScanningStealth by remember { mutableStateOf(false) }
+            var stealthScanStatus by remember { mutableStateOf<String?>(null) }
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Stealth Address Mode",
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Enable private transactions on home screen",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Switch(
+                            checked = isStealthEnabled,
+                            onCheckedChange = { enabled ->
+                                HapticUtil.lightTap(context)
+                                isStealthEnabled = enabled
+                                securityManager.setStealthModeEnabled(enabled)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = PurpleNeon,
+                                uncheckedThumbColor = TextMuted,
+                                uncheckedTrackColor = DarkSurfaceElevated
+                            )
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isStealthEnabled) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                        ) {
+                            HorizontalDivider(
+                                color = GlassCardBorder,
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "⚡ Privacy Mode Active",
+                                    color = AmberGold,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "When sending, you can use stealth addresses to hide the recipient on-chain. The sender generates a one-time address using the recipient's public keys (ECDH). Only the recipient's view key can detect the payment.",
+                                color = TextSecondary,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Button(
+                                onClick = {
+                                    if (!isScanningStealth) {
+                                        HapticUtil.performSuccess(context)
+                                        isScanningStealth = true
+                                        stealthScanStatus = "Scanning stealth outputs…"
+                                        scope.launch {
+                                            val result = onScanStealthOutputs()
+                                            isScanningStealth = false
+                                            result.onSuccess { (count, spw) ->
+                                                stealthScanStatus = if (count > 0) {
+                                                    "Found $count stealth output(s): ${String.format(java.util.Locale.US, "%.8f", spw)} SPW"
+                                                } else {
+                                                    "No new stealth outputs found."
+                                                }
+                                            }.onFailure { err ->
+                                                stealthScanStatus = "Scan error: ${err.message}"
+                                            }
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DarkSurfaceElevated,
+                                    contentColor = TextPrimary
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, PurpleNeon.copy(alpha = 0.6f)),
+                                modifier = Modifier.height(42.dp)
+                            ) {
+                                if (isScanningStealth) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = PurpleNeon,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Scanning…", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = PurpleNeon,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Scan Stealth Outputs", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+
+                            if (stealthScanStatus != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = stealthScanStatus ?: "",
+                                    color = if (stealthScanStatus?.contains("Found") == true) GreenEmerald else if (stealthScanStatus?.contains("error") == true) RedCoral else CyanNeon,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     }

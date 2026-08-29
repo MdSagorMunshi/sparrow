@@ -488,6 +488,9 @@ class MainActivity : FragmentActivity() {
                                         navController.navigate("onboarding") {
                                             popUpTo(0) { inclusive = true }
                                         }
+                                    },
+                                    onScanStealthOutputs = {
+                                        repository.scanStealthOutputs()
                                     }
                                 )
                             }

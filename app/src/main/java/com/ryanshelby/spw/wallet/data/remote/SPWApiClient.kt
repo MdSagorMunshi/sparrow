@@ -100,6 +100,12 @@ data class SpwScanResponse(
     @Json(name = "error") val error: String? = null
 )
 
+@JsonClass(generateAdapter = true)
+data class SpwBlockResponse(
+    @Json(name = "hash") val hash: String = "",
+    @Json(name = "transactions") val transactions: List<SpwTransaction> = emptyList()
+)
+
 class SPWApiClient(
     private var baseUrl: String = SPWCrypto.DEFAULT_NODE_URL
 ) {
@@ -215,6 +221,39 @@ class SPWApiClient(
             Result.success(result ?: SpwScanResponse())
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun getBlock(height: Long): Result<SpwBlockResponse> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/block/$height"
+            val request = Request.Builder().url(url).get().build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty body"))
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("HTTP ${response.code}: $body"))
+            }
+            val adapter = moshi.adapter(SpwBlockResponse::class.java)
+            val result = adapter.fromJson(body)
+            Result.success(result ?: SpwBlockResponse())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getLatestBlockHeight(): Long = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/chain/info"
+            val request = Request.Builder().url(url).get().build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: return@withContext 0L
+            val heightIdx = body.indexOf("\"height\":")
+            if (heightIdx != -1) {
+                val endIdx = body.indexOfAny(charArrayOf(',', '}'), heightIdx)
+                body.substring(heightIdx + 9, endIdx).trim().toLongOrNull() ?: 0L
+            } else 0L
+        } catch (e: Exception) {
+            0L
         }
     }
 }

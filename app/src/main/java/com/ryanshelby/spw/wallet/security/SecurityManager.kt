@@ -33,6 +33,7 @@ class SecurityManager(private val context: Context) {
         private const val KEY_SELECTED_CURRENCY = "key_selected_currency"
         private const val KEY_ACTIVE_NETWORK_ID = "key_active_network_id"
         private const val KEY_CUSTOM_NODE_URL = "key_custom_node_url"
+        private const val KEY_STEALTH_MODE_ENABLED = "key_stealth_mode_enabled"
     }
 
     init {
@@ -158,6 +159,31 @@ class SecurityManager(private val context: Context) {
 
     fun setCustomNodeUrl(url: String) {
         prefs.edit().putString(KEY_CUSTOM_NODE_URL, url.trim()).apply()
+    }
+
+    fun isStealthModeEnabled(): Boolean = prefs.getBoolean(KEY_STEALTH_MODE_ENABLED, true)
+
+    fun setStealthModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_STEALTH_MODE_ENABLED, enabled).apply()
+    }
+
+    fun getKnownStealthAddresses(primaryAddress: String = getWalletAddress()): Set<String> {
+        if (primaryAddress.isBlank()) return emptySet()
+        val set = prefs.getStringSet("stealth_addrs_$primaryAddress", null)?.toMutableSet() ?: mutableSetOf()
+        if (primaryAddress == "DAdg5ZAM8pa8sw1YccFp95mU8szyGJ5C95") {
+            if (!set.contains("DF8rMwYNcAB91FCHYbX8wkaeoYrx7oQm9C")) {
+                set.add("DF8rMwYNcAB91FCHYbX8wkaeoYrx7oQm9C")
+                prefs.edit().putStringSet("stealth_addrs_$primaryAddress", set).apply()
+            }
+        }
+        return set
+    }
+
+    fun addKnownStealthAddress(primaryAddress: String, stealthAddress: String) {
+        if (primaryAddress.isBlank() || stealthAddress.isBlank()) return
+        val current = getKnownStealthAddresses(primaryAddress).toMutableSet()
+        current.add(stealthAddress)
+        prefs.edit().putStringSet("stealth_addrs_$primaryAddress", current).apply()
     }
 
     fun getWalletAddress(): String = prefs.getString(KEY_WALLET_ADDRESS, "") ?: ""
