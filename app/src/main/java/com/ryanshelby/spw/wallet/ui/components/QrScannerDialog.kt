@@ -379,6 +379,17 @@ fun QrScannerDialog(
 
 @Composable
 private fun ViewfinderOverlay() {
+    val infiniteTransition = rememberInfiniteTransition(label = "QrLaser")
+    val laserOffset by infiniteTransition.animateFloat(
+        initialValue = 10f,
+        targetValue = 236f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "QrLaserOffset"
+    )
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -390,6 +401,25 @@ private fun ViewfinderOverlay() {
                 .clip(RoundedCornerShape(20.dp))
                 .border(1.5.dp, BorderSubtle, RoundedCornerShape(20.dp))
         ) {
+            // Animated Scanning Laser Beam
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.5.dp)
+                    .offset(y = laserOffset.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                com.ryanshelby.spw.wallet.ui.theme.AccentPrimary.copy(alpha = 0.8f),
+                                Color.White,
+                                com.ryanshelby.spw.wallet.ui.theme.AccentPrimary.copy(alpha = 0.8f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
             // Clean Corner Accents
             Box(
                 modifier = Modifier

@@ -53,6 +53,8 @@
   - Device diagnostic badges (`OLED PANEL` vs `LCD DISPLAY`) in Settings.
   - Informative lock protection restricting OLED mode strictly to verified AMOLED/OLED panels to ensure physical battery savings and prevent backlight bleed on LCD screens.
 - **Institutional Key & Scanner Utilities**:
+  - **Cryptographic Scanning Loading Animations**: Live radar sonar pulse waves, sweeping laser beam, rotating 360° sync indicator, and animated cryptographic phase status tickers during stealth UTXO detection.
+  - **Oscillating QR Laser Beam**: Continuous vertical laser scanning animation inside the camera viewfinder reticle.
   - High-contrast isolated QR plate with instant haptic clipboard feedback and stealth key disclosure.
   - Minimalist viewfinder reticle with hairline white corner brackets in QR camera scanner.
   - Spring-driven security PIN numpad with pure white filled dot indicators.

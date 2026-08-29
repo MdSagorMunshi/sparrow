@@ -101,6 +101,7 @@ import com.ryanshelby.spw.wallet.security.SecurityManager
 import com.ryanshelby.spw.wallet.ui.components.FinanceCard
 import com.ryanshelby.spw.wallet.ui.components.GlassCard
 import com.ryanshelby.spw.wallet.ui.components.PinPadView
+import com.ryanshelby.spw.wallet.ui.components.StealthScanStatusCard
 import com.ryanshelby.spw.wallet.ui.theme.AmberGold
 import com.ryanshelby.spw.wallet.ui.theme.AppThemeState
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
@@ -910,64 +911,28 @@ fun SettingsSecurityScreen(
                                 lineHeight = 17.sp
                             )
                             Spacer(modifier = Modifier.height(14.dp))
-                            Button(
-                                onClick = {
-                                    if (!isScanningStealth) {
-                                        HapticUtil.performSuccess(context)
-                                        isScanningStealth = true
-                                        stealthScanStatus = "Scanning stealth outputs…"
-                                        scope.launch {
-                                            val result = onScanStealthOutputs()
-                                            isScanningStealth = false
-                                            result.onSuccess { (count, spw) ->
-                                                stealthScanStatus = if (count > 0) {
-                                                    "Found $count stealth output(s): ${String.format(java.util.Locale.US, "%.8f", spw)} SPW"
-                                                } else {
-                                                    "No new stealth outputs found."
-                                                }
-                                            }.onFailure { err ->
-                                                stealthScanStatus = "Scan error: ${err.message}"
+                            StealthScanStatusCard(
+                                isScanning = isScanningStealth,
+                                statusMessage = stealthScanStatus,
+                                onScanClick = {
+                                    HapticUtil.performSuccess(context)
+                                    isScanningStealth = true
+                                    stealthScanStatus = null
+                                    scope.launch {
+                                        val result = onScanStealthOutputs()
+                                        isScanningStealth = false
+                                        result.onSuccess { (count, spw) ->
+                                            stealthScanStatus = if (count > 0) {
+                                                "Found $count stealth output(s): ${String.format(java.util.Locale.US, "%.8f", spw)} SPW"
+                                            } else {
+                                                "Ledger synchronized • No new stealth outputs"
                                             }
+                                        }.onFailure { err ->
+                                            stealthScanStatus = "Scan error: ${err.message}"
                                         }
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = DarkSurfaceElevated,
-                                    contentColor = TextPrimary
-                                ),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, PurpleNeon.copy(alpha = 0.6f)),
-                                modifier = Modifier.height(42.dp)
-                            ) {
-                                if (isScanningStealth) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        color = PurpleNeon,
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Scanning…", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = null,
-                                        tint = PurpleNeon,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Scan Stealth Outputs", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
-                            }
-
-                            if (stealthScanStatus != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = stealthScanStatus ?: "",
-                                    color = if (stealthScanStatus?.contains("Found") == true) GreenEmerald else if (stealthScanStatus?.contains("error") == true) RedCoral else CyanNeon,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                            )
                         }
                     }
                 }
