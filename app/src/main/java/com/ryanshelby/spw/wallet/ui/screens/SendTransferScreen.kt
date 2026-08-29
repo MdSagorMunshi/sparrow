@@ -70,6 +70,8 @@ import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.security.SPWCrypto
 import com.ryanshelby.spw.wallet.ui.components.GlassCard
 import com.ryanshelby.spw.wallet.ui.components.PinPadView
+import com.ryanshelby.spw.wallet.ui.components.TransactionStatusOverlay
+import com.ryanshelby.spw.wallet.ui.components.TxOverlayState
 import com.ryanshelby.spw.wallet.ui.theme.CyanGlow
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
@@ -147,15 +149,18 @@ fun SendTransferScreen(
     var showPinDialog by remember { mutableStateOf(false) }
     var enteredPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
-    var isBroadcasting by remember { mutableStateOf(false) }
-    var broadcastedTxHash by remember { mutableStateOf<String?>(null) }
-    var broadcastError by remember { mutableStateOf<String?>(null) }
     var showContactsDialog by remember { mutableStateOf(false) }
+
+    // Animated overlay state
+    var txOverlayState by remember { mutableStateOf(TxOverlayState.HIDDEN) }
+    var overlayTxHash by remember { mutableStateOf<String?>(null) }
+    var overlayError by remember { mutableStateOf<String?>(null) }
 
     val amountValue = amountText.toDoubleOrNull() ?: 0.0
     val amountFeathers = (amountValue * SPWCrypto.FEATHERS_PER_SPW).toLong()
     val isAmountValid = amountValue > 0 && (amountValue + gasFeeSpw) <= nativeToken.balance
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -507,7 +512,7 @@ fun SendTransferScreen(
         // Confirm Send Button
         Button(
             onClick = {
-                HapticUtil.performSuccess(context)
+                HapticUtil.lightTap(context)
                 onTriggerBiometric {
                     showPinDialog = false
                     executeBroadcast(
@@ -519,20 +524,20 @@ fun SendTransferScreen(
                         isStealth = isStealthTransfer,
                         recipientViewPubHex = recipientViewPub.ifBlank { null },
                         scope = scope,
-                        onStart = { isBroadcasting = true; broadcastError = null },
+                        onStart = { txOverlayState = TxOverlayState.BROADCASTING; overlayError = null },
                         onSuccess = { txid ->
-                            isBroadcasting = false
-                            broadcastedTxHash = txid
+                            overlayTxHash = txid
+                            txOverlayState = TxOverlayState.SUCCESS
                         },
                         onError = { err ->
-                            isBroadcasting = false
-                            broadcastError = err
+                            overlayError = err
+                            txOverlayState = TxOverlayState.FAILURE
                         }
                     )
                 }
                 showPinDialog = true
             },
-            enabled = recipientAddress.isNotBlank() && amountValue > 0 && !isBroadcasting,
+            enabled = recipientAddress.isNotBlank() && amountValue > 0 && txOverlayState == TxOverlayState.HIDDEN,
             colors = ButtonDefaults.buttonColors(
                 containerColor = CyanNeon,
                 contentColor = DarkBackground,
@@ -544,66 +549,19 @@ fun SendTransferScreen(
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            if (isBroadcasting) {
-                CircularProgressIndicator(color = DarkBackground, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("Signing & Broadcasting...", fontWeight = FontWeight.Bold, color = DarkBackground)
-            } else {
-                val isBtnEnabled = recipientAddress.isNotBlank() && amountValue > 0 && !isBroadcasting
-                Text(
-                    text = "Authenticate & Broadcast Transfer",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isBtnEnabled) DarkBackground else TextMuted
-                )
-            }
-        }
-
-        if (broadcastError != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(broadcastError ?: "", color = RedCoral, fontSize = 12.sp)
+            val isBtnEnabled = recipientAddress.isNotBlank() && amountValue > 0 && txOverlayState == TxOverlayState.HIDDEN
+            Text(
+                text = "Authenticate & Broadcast Transfer",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isBtnEnabled) DarkBackground else TextMuted
+            )
         }
 
         Spacer(modifier = Modifier.height(40.dp))
     }
 
-    // Success Dialog
-    if (broadcastedTxHash != null) {
-        Dialog(onDismissRequest = { broadcastedTxHash = null; onBack() }) {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Transfer Broadcasted!", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("Your transaction has been submitted to the SPW mempool.", color = TextSecondary, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(DarkSurfaceElevated)
-                            .padding(10.dp)
-                    ) {
-                        Text("TXID: $broadcastedTxHash", color = CyanNeon, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { broadcastedTxHash = null; onBack() },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = DarkBackground),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Done", fontWeight = FontWeight.Bold, color = DarkBackground)
-                    }
-                }
-            }
-        }
-    }
+
 
     // Contacts Dialog
     if (showContactsDialog) {
@@ -683,14 +641,14 @@ fun SendTransferScreen(
                                             isStealth = isStealthTransfer,
                                             recipientViewPubHex = recipientViewPub.ifBlank { null },
                                             scope = scope,
-                                            onStart = { isBroadcasting = true; broadcastError = null },
+                                            onStart = { txOverlayState = TxOverlayState.BROADCASTING; overlayError = null },
                                             onSuccess = { txid ->
-                                                isBroadcasting = false
-                                                broadcastedTxHash = txid
+                                                overlayTxHash = txid
+                                                txOverlayState = TxOverlayState.SUCCESS
                                             },
                                             onError = { err ->
-                                                isBroadcasting = false
-                                                broadcastError = err
+                                                overlayError = err
+                                                txOverlayState = TxOverlayState.FAILURE
                                             }
                                         )
                                     } else {
@@ -715,14 +673,14 @@ fun SendTransferScreen(
                                     isStealth = isStealthTransfer,
                                     recipientViewPubHex = recipientViewPub.ifBlank { null },
                                     scope = scope,
-                                    onStart = { isBroadcasting = true; broadcastError = null },
+                                    onStart = { txOverlayState = TxOverlayState.BROADCASTING; overlayError = null },
                                     onSuccess = { txid ->
-                                        isBroadcasting = false
-                                        broadcastedTxHash = txid
+                                        overlayTxHash = txid
+                                        txOverlayState = TxOverlayState.SUCCESS
                                     },
                                     onError = { err ->
-                                        isBroadcasting = false
-                                        broadcastError = err
+                                        overlayError = err
+                                        txOverlayState = TxOverlayState.FAILURE
                                     }
                                 )
                             }
@@ -732,6 +690,24 @@ fun SendTransferScreen(
             }
         }
     }
+
+    // ── Animated Transaction Status Overlay ──────────────────────
+    TransactionStatusOverlay(
+        state = txOverlayState,
+        txHash = overlayTxHash,
+        sentAmount = amountValue,
+        recipientAddress = recipientAddress,
+        errorMessage = overlayError,
+        onDismiss = {
+            txOverlayState = TxOverlayState.HIDDEN
+            if (overlayTxHash != null) {
+                onBack()
+            }
+            overlayTxHash = null
+            overlayError = null
+        }
+    )
+    } // close outer Box
 }
 
 private fun executeBroadcast(
