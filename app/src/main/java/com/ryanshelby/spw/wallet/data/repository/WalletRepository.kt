@@ -430,10 +430,16 @@ class WalletRepository(
         val feeFeathers = (gasFee * SPWCrypto.FEATHERS_PER_SPW).toLong().coerceAtLeast(10000L)
         val neededFeathers = amountFeathers + feeFeathers
 
-        // Ensure we have fresh UTXOs
+        // Use cached UTXOs first (updated every 2s by periodic sync), try fresh fetch as enhancement
         apiClient.setNodeUrl(_activeNetwork.value.rpcUrl)
-        val utxoResult = apiClient.getUtxos(myAddress)
-        val availableUtxos = utxoResult.getOrNull() ?: _liveUtxos.value
+        val availableUtxos = if (_liveUtxos.value.isNotEmpty()) {
+            // We already have cached UTXOs from periodic sync — use them immediately
+            _liveUtxos.value
+        } else {
+            // No cached UTXOs yet, must fetch
+            val utxoResult = apiClient.getUtxos(myAddress)
+            utxoResult.getOrNull() ?: emptyList()
+        }
 
         var selectedTotal = 0L
         val selectedUtxos = mutableListOf<SpwUtxo>()
@@ -576,9 +582,9 @@ class WalletRepository(
                 txHash = finalTxHash
             )
 
-            // Refresh balance
+            // Refresh balance quickly
             repositoryScope.launch {
-                delay(1500)
+                delay(500)
                 refreshOnChainData()
             }
             return Result.success(finalTxHash)
