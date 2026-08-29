@@ -1,14 +1,13 @@
 package com.ryanshelby.spw.wallet.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,23 +30,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ryanshelby.spw.wallet.security.HapticUtil
-import com.ryanshelby.spw.wallet.ui.theme.CyanGlow
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBackground
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
-import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
-import com.ryanshelby.spw.wallet.ui.theme.RedCoral
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
 
+/**
+ * Institutional PIN Entry & Keypad Component
+ * Features tactile physics spring feedback and minimalist indicator dots.
+ */
 @Composable
 fun PinPadView(
     enteredPin: String,
@@ -64,7 +65,6 @@ fun PinPadView(
     val digits = remember(isScrambled) {
         val list = (0..9).map { it.toString() }.toMutableList()
         if (isScrambled) list.shuffle() else {
-            // standard order: 1-9 then 0 at the end
             list.remove("0")
             list.add("0")
         }
@@ -79,34 +79,27 @@ fun PinPadView(
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier.padding(vertical = 18.dp)
         ) {
             for (i in 0 until maxDigits) {
                 val isFilled = i < enteredPin.length
                 val animatedScale by animateFloatAsState(
-                    targetValue = if (isFilled) 1.25f else 1.0f,
-                    animationSpec = tween(150, easing = FastOutSlowInEasing),
+                    targetValue = if (isFilled) 1.2f else 1.0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
                     label = "dotScale"
                 )
 
                 Box(
                     modifier = Modifier
-                        .size((16 * animatedScale).dp)
+                        .size((14 * animatedScale).dp)
                         .clip(CircleShape)
                         .background(
-                            if (isFilled) {
-                                Brush.radialGradient(
-                                    colors = listOf(CyanNeon, PurpleNeon)
-                                )
-                            } else {
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0x338E9BB5), Color(0x118E9BB5))
-                                )
-                            }
+                            if (isFilled) TextPrimary else SurfaceSubtle,
+                            CircleShape
                         )
                         .border(
                             width = 1.dp,
-                            color = if (isFilled) CyanGlow else GlassCardBorder,
+                            color = if (isFilled) TextPrimary else BorderSubtle,
                             shape = CircleShape
                         )
                 )
@@ -121,9 +114,9 @@ fun PinPadView(
             errorMessage?.let {
                 Text(
                     text = it,
-                    color = RedCoral,
+                    color = SemanticError,
                     style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
@@ -162,15 +155,15 @@ fun PinPadView(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left slot: Biometric button or empty
+                // Left slot: Biometric button or spacer
                 if (onBiometricClick != null) {
                     Box(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(GlassCardBackground)
-                            .border(1.dp, GlassCardBorder, CircleShape)
-                            .clickable {
+                            .background(SurfacePrimary)
+                            .border(1.dp, BorderSubtle, CircleShape)
+                            .bouncyClickable {
                                 HapticUtil.heavyClick(context)
                                 onBiometricClick()
                             },
@@ -179,8 +172,8 @@ fun PinPadView(
                         Icon(
                             imageVector = Icons.Default.Fingerprint,
                             contentDescription = "Biometric Login",
-                            tint = CyanNeon,
-                            modifier = Modifier.size(32.dp)
+                            tint = TextPrimary,
+                            modifier = Modifier.size(30.dp)
                         )
                     }
                 } else {
@@ -204,9 +197,9 @@ fun PinPadView(
                     modifier = Modifier
                         .size(72.dp)
                         .clip(CircleShape)
-                        .background(GlassCardBackground)
-                        .border(1.dp, GlassCardBorder, CircleShape)
-                        .clickable {
+                        .background(SurfacePrimary)
+                        .border(1.dp, BorderSubtle, CircleShape)
+                        .bouncyClickable {
                             HapticUtil.lightTap(context)
                             onBackspaceClick()
                         },
@@ -216,7 +209,7 @@ fun PinPadView(
                         imageVector = Icons.Default.Backspace,
                         contentDescription = "Backspace",
                         tint = TextSecondary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -234,17 +227,17 @@ fun NumpadButton(
         modifier = modifier
             .size(72.dp)
             .clip(CircleShape)
-            .background(DarkSurfaceElevated.copy(alpha = 0.8f))
-            .border(1.dp, GlassCardBorder, CircleShape)
-            .clickable(onClick = onClick),
+            .background(SurfaceElevated)
+            .border(1.dp, BorderSubtle, CircleShape)
+            .bouncyClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             color = TextPrimary,
-            fontSize = 24.sp
+            fontSize = 22.sp
         )
     }
 }

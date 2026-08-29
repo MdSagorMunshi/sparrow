@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -53,17 +54,20 @@ import com.ryanshelby.spw.wallet.data.model.AppLanguage
 import com.ryanshelby.spw.wallet.data.model.NetworkConfig
 import com.ryanshelby.spw.wallet.data.model.TranslationHelper
 import com.ryanshelby.spw.wallet.security.HapticUtil
-import com.ryanshelby.spw.wallet.ui.components.GlassCard
+import com.ryanshelby.spw.wallet.ui.components.FinanceCard
 import com.ryanshelby.spw.wallet.ui.components.GlowingQrCodeView
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
-import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
-import com.ryanshelby.spw.wallet.ui.theme.GreenEmerald
-import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
+import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -103,7 +107,7 @@ fun ReceiveScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(FinanceBackground)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -115,72 +119,79 @@ fun ReceiveScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = {
-                    HapticUtil.lightTap(context)
-                    onBack()
-                },
+            Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
-                    .background(DarkSurfaceElevated)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfacePrimary)
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                    .bouncyClickable {
+                        HapticUtil.performKeyClick(context)
+                        onBack()
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = TextPrimary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "Receive SPW",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = "Receive SPW",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "${network.name} Address",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         // Main QR Display Card
-        GlassCard(
-            modifier = Modifier.fillMaxWidth(),
-            glowing = true
-        ) {
+        FinanceCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "SPW Address QR Code",
+                    text = "Your Address QR Code",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = TextPrimary
                 )
                 Text(
-                    text = network.name,
+                    text = "Scan with any SPW-compatible wallet to pay",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CyanNeon
+                    color = TextSecondary
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // High Quality Glowing QR
+                // Clean high-contrast QR code
                 GlowingQrCodeView(
                     data = qrPayload,
-                    sizeDp = 200.dp
+                    sizeDp = 210.dp
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // Address Box
+                // Address Box (Clickable copy)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(DarkSurfaceElevated)
-                        .border(1.dp, GlassCardBorder, RoundedCornerShape(12.dp))
-                        .clickable {
+                        .background(SurfaceSubtle)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                        .bouncyClickable {
                             clipboardManager.setText(AnnotatedString(walletAddress))
                             HapticUtil.performSuccess(context)
                             copiedAddressRecently = true
@@ -189,7 +200,7 @@ fun ReceiveScreen(
                                 copiedAddressRecently = false
                             }
                         }
-                        .padding(12.dp),
+                        .padding(14.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -197,24 +208,24 @@ fun ReceiveScreen(
                             text = walletAddress,
                             style = MaterialTheme.typography.bodyMedium,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CyanNeon,
+                            fontWeight = FontWeight.Normal,
+                            color = TextPrimary,
                             fontSize = 12.sp,
-                            lineHeight = 16.sp
+                            lineHeight = 18.sp
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = if (copiedAddressRecently) Icons.Default.Check else Icons.Default.ContentCopy,
                                 contentDescription = null,
-                                tint = if (copiedAddressRecently) GreenEmerald else TextSecondary,
+                                tint = if (copiedAddressRecently) SemanticPositive else TextSecondary,
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = if (copiedAddressRecently) "Copied to clipboard!" else "Tap to copy address",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (copiedAddressRecently) GreenEmerald else TextSecondary
+                                color = if (copiedAddressRecently) SemanticPositive else TextSecondary
                             )
                         }
                     }
@@ -239,13 +250,13 @@ fun ReceiveScreen(
                         copiedAddressRecently = false
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceElevated, contentColor = TextPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceElevated, contentColor = TextPrimary),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.weight(1f).height(46.dp)
             ) {
-                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(15.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Copy Address", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("Copy Address", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
 
             Button(
@@ -258,27 +269,35 @@ fun ReceiveScreen(
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share SPW Address"))
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = DarkBackground),
+                colors = ButtonDefaults.buttonColors(containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.weight(1f).height(46.dp)
             ) {
-                Icon(Icons.Default.Share, contentDescription = null, tint = DarkBackground, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Share, contentDescription = null, tint = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText, modifier = Modifier.size(15.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Share", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DarkBackground)
+                Text("Share", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Stealth Public Keys Card (ECDH Dual-Key)
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
+        FinanceCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Shield, contentDescription = null, tint = PurpleNeon, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Dual-Key Stealth Receiving", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SurfaceSubtle),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Shield, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Dual-Key Stealth Receiving", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "To receive private, untraceable stealth payments, share your Spend Public Key and View Public Key with the sender.",
                     color = TextSecondary,
@@ -294,9 +313,9 @@ fun ReceiveScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("SPEND PUBLIC KEY (HEX):", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("SPEND PUBLIC KEY (HEX)", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                         if (copiedSpendPubRecently) {
-                            Text("Copied!", color = GreenEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Copied!", color = SemanticPositive, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -304,9 +323,9 @@ fun ReceiveScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(DarkSurfaceElevated)
-                            .border(1.dp, if (copiedSpendPubRecently) GreenEmerald.copy(alpha = 0.5f) else GlassCardBorder, RoundedCornerShape(8.dp))
-                            .clickable {
+                            .background(SurfaceSubtle)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
+                            .bouncyClickable {
                                 clipboardManager.setText(AnnotatedString(effectiveSpendPub))
                                 HapticUtil.performSuccess(context)
                                 copiedSpendPubRecently = true
@@ -324,7 +343,7 @@ fun ReceiveScreen(
                         ) {
                             Text(
                                 text = effectiveSpendPub,
-                                color = CyanNeon,
+                                color = TextPrimary,
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.weight(1f)
@@ -333,8 +352,8 @@ fun ReceiveScreen(
                             Icon(
                                 imageVector = if (copiedSpendPubRecently) Icons.Default.Check else Icons.Default.ContentCopy,
                                 contentDescription = "Copy Spend Public Key",
-                                tint = if (copiedSpendPubRecently) GreenEmerald else TextMuted,
-                                modifier = Modifier.size(14.dp)
+                                tint = if (copiedSpendPubRecently) SemanticPositive else TextMuted,
+                                modifier = Modifier.size(13.dp)
                             )
                         }
                     }
@@ -348,9 +367,9 @@ fun ReceiveScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("VIEW PUBLIC KEY (HEX - ECDH):", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("VIEW PUBLIC KEY (ECDH)", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                         if (copiedViewPubRecently) {
-                            Text("Copied!", color = GreenEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Copied!", color = SemanticPositive, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -358,9 +377,9 @@ fun ReceiveScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(DarkSurfaceElevated)
-                            .border(1.dp, if (copiedViewPubRecently) GreenEmerald.copy(alpha = 0.5f) else GlassCardBorder, RoundedCornerShape(8.dp))
-                            .clickable {
+                            .background(SurfaceSubtle)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
+                            .bouncyClickable {
                                 clipboardManager.setText(AnnotatedString(effectiveViewPub))
                                 HapticUtil.performSuccess(context)
                                 copiedViewPubRecently = true
@@ -378,7 +397,7 @@ fun ReceiveScreen(
                         ) {
                             Text(
                                 text = effectiveViewPub,
-                                color = PurpleNeon,
+                                color = TextPrimary,
                                 fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.weight(1f)
@@ -387,8 +406,8 @@ fun ReceiveScreen(
                             Icon(
                                 imageVector = if (copiedViewPubRecently) Icons.Default.Check else Icons.Default.ContentCopy,
                                 contentDescription = "Copy View Public Key",
-                                tint = if (copiedViewPubRecently) GreenEmerald else TextMuted,
-                                modifier = Modifier.size(14.dp)
+                                tint = if (copiedViewPubRecently) SemanticPositive else TextMuted,
+                                modifier = Modifier.size(13.dp)
                             )
                         }
                     }
@@ -413,8 +432,8 @@ fun ReceiveScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = DarkSurfaceElevated,
-                                contentColor = PurpleNeon
+                                containerColor = SurfaceElevated,
+                                contentColor = TextPrimary
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f).height(40.dp)
@@ -422,15 +441,14 @@ fun ReceiveScreen(
                             Icon(
                                 imageVector = if (copiedBothRecently) Icons.Default.Check else Icons.Default.ContentCopy,
                                 contentDescription = null,
-                                tint = if (copiedBothRecently) GreenEmerald else PurpleNeon,
-                                modifier = Modifier.size(14.dp)
+                                tint = if (copiedBothRecently) SemanticPositive else TextSecondary,
+                                modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (copiedBothRecently) "Copied Both!" else "Copy Both Keys",
+                                text = if (copiedBothRecently) "Copied Both!" else "Copy Both",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (copiedBothRecently) GreenEmerald else PurpleNeon
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
 
@@ -445,15 +463,15 @@ fun ReceiveScreen(
                                 context.startActivity(Intent.createChooser(shareIntent, "Share SPW Stealth Keys"))
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = PurpleNeon.copy(alpha = 0.2f),
-                                contentColor = PurpleNeon
+                                containerColor = SurfaceElevated,
+                                contentColor = TextPrimary
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f).height(40.dp)
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = null, tint = PurpleNeon, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Share, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(13.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Share Both Keys", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = PurpleNeon)
+                            Text("Share Both", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                         }
                     }
                 }
@@ -463,9 +481,9 @@ fun ReceiveScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Amount Requester
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
+        FinanceCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Specify Amount (Optional)", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("Specify Amount (Optional)", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = requestedAmount,
@@ -473,9 +491,12 @@ fun ReceiveScreen(
                     placeholder = { Text("0.00 SPW", color = TextMuted) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanNeon,
-                        unfocusedBorderColor = GlassCardBorder,
+                        focusedContainerColor = SurfaceSubtle,
+                        unfocusedContainerColor = SurfaceSubtle,
+                        focusedBorderColor = AccentPrimary,
+                        unfocusedBorderColor = BorderSubtle,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
                     )

@@ -103,6 +103,7 @@ import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
 import com.ryanshelby.spw.wallet.ui.theme.GreenEmerald
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
 import com.ryanshelby.spw.wallet.ui.theme.RedCoral
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
@@ -540,7 +541,7 @@ fun SettingsSecurityScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(22.dp))
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("Open SPW Blockchain Explorer", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -574,7 +575,7 @@ fun SettingsSecurityScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Language, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Default.Language, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(strings.language, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -1522,7 +1523,7 @@ fun SettingsSecurityScreen(
                             .padding(20.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Export Private Keys", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                         }
@@ -1572,11 +1573,11 @@ fun SettingsSecurityScreen(
 
                         Button(
                             onClick = { showKeysModal = false },
-                            colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = DarkBackground),
+                            colors = ButtonDefaults.buttonColors(containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Done", fontWeight = FontWeight.Bold, color = DarkBackground)
+                            Text("Done", fontWeight = FontWeight.Bold, color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText)
                         }
                     }
                 }
@@ -1598,15 +1599,15 @@ fun SettingsSecurityScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(GreenEmerald.copy(alpha = 0.15f)),
+                                .background(SurfaceSubtle),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Shield, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Shield, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(24.dp))
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text("Secret Recovery Phrase", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Decrypted via Android Keystore Hardware Enclave", color = GreenEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Decrypted via Android Keystore Hardware Enclave", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             "Write these 12 words down in order. Never share them with anyone.",

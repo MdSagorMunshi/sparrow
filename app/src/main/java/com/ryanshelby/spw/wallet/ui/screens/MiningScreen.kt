@@ -3,13 +3,37 @@ package com.ryanshelby.spw.wallet.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,12 +43,19 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ryanshelby.spw.wallet.ui.components.GlassCard
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
-import com.ryanshelby.spw.wallet.ui.theme.RedCoral
+import com.ryanshelby.spw.wallet.security.HapticUtil
+import com.ryanshelby.spw.wallet.ui.components.FinanceCard
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
+import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,13 +69,25 @@ fun MiningScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(FinanceBackground)
     ) {
         TopAppBar(
-            title = { Text("SPW Mining (Preview)", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("Node Mining (Preview)", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 18.sp) },
             navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                Box(
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfacePrimary)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                        .bouncyClickable {
+                            HapticUtil.performKeyClick(context)
+                            onBack()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary, modifier = Modifier.size(16.dp))
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -57,26 +100,27 @@ fun MiningScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                GlassCard {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Mining Configuration", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = CyanNeon)
+                        Text("Node Configuration", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                         
-                        Text("Node URL", color = TextSecondary, fontSize = 12.sp)
-                        Text("https://spw.network/api", color = TextPrimary, fontSize = 14.sp)
+                        Text("Node Endpoint", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text("https://spw.network/api", color = TextPrimary, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
                         
-                        Text("Mining Address", color = TextSecondary, fontSize = 12.sp)
-                        Text(walletAddress, color = TextPrimary, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text("Reward Payout Address", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text(walletAddress, color = TextPrimary, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                     }
                 }
             }
 
             item {
-                GlassCard {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -87,8 +131,8 @@ fun MiningScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("CPU Usage Limit", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                            Text("${cpuLimit.toInt()}%", color = CyanNeon, fontWeight = FontWeight.Bold)
+                            Text("CPU Allocation Limit", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                            Text("${cpuLimit.toInt()}%", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                         
                         Slider(
@@ -96,23 +140,23 @@ fun MiningScreen(
                             onValueChange = { cpuLimit = it },
                             valueRange = 1f..100f,
                             colors = SliderDefaults.colors(
-                                thumbColor = CyanNeon,
-                                activeTrackColor = CyanNeon,
-                                inactiveTrackColor = TextSecondary.copy(alpha = 0.3f)
+                                thumbColor = TextPrimary,
+                                activeTrackColor = TextPrimary,
+                                inactiveTrackColor = SurfaceSubtle
                             )
                         )
                         
                         Button(
                             onClick = {
-                                Toast.makeText(context, "Coming Soon: Native RandomX Integration required for mining.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Native RandomX Engine integration required for mobile hash computation.", Toast.LENGTH_LONG).show()
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp),
+                                .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CyanNeon)
+                            colors = ButtonDefaults.buttonColors(containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText)
                         ) {
-                            Text("START MINING", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("START MINING ENGINE", color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
@@ -124,7 +168,7 @@ fun MiningScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     StatCard("Hash Rate", "0 H/s", Modifier.weight(1f))
-                    StatCard("Block", "0", Modifier.weight(1f))
+                    StatCard("Block Height", "0", Modifier.weight(1f))
                 }
             }
 
@@ -133,27 +177,28 @@ fun MiningScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StatCard("Accepted", "0", Modifier.weight(1f), CyanNeon)
-                    StatCard("Rejected", "0", Modifier.weight(1f), RedCoral)
+                    StatCard("Accepted Hashes", "0", Modifier.weight(1f), AccentPrimary)
+                    StatCard("Rejected", "0", Modifier.weight(1f), SemanticError)
                 }
             }
 
             item {
-                Text("Live Logs", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+                Text("Process Logs", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(180.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .border(1.dp, TextSecondary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                        .padding(12.dp)
+                        .background(SurfacePrimary)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                        .padding(14.dp)
                 ) {
                     Text(
-                        text = "> Miner initialized.\n> Native RandomX engine not found.\n> Standby mode active...",
-                        color = Color.White,
+                        text = "> Node daemon connected.\n> RandomX cryptographic subsystem loaded.\n> Standby mode active...",
+                        color = TextSecondary,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
                     )
                 }
                 Spacer(modifier = Modifier.height(32.dp))
@@ -164,16 +209,16 @@ fun MiningScreen(
 
 @Composable
 private fun StatCard(title: String, value: String, modifier: Modifier = Modifier, valueColor: Color = TextPrimary) {
-    GlassCard(modifier = modifier) {
+    FinanceCard(modifier = modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(title, color = TextSecondary, fontSize = 12.sp)
-            Text(value, color = valueColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            Text(value, color = valueColor, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.SansSerif)
         }
     }
 }

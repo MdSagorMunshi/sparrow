@@ -218,21 +218,6 @@ fun OnboardingScreen(
             .fillMaxSize()
             .background(DarkBackground)
     ) {
-        // Holographic Cyberpunk Background Glow
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            CyanNeon.copy(alpha = 0.15f),
-                            PurpleNeon.copy(alpha = 0.08f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
 
         AnimatedContent(
             targetState = currentStage,
@@ -1529,7 +1514,7 @@ private fun SetSecurityPinStep(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Fingerprint, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Fingerprint, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text("Enable Biometric Unlock", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }

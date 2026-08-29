@@ -83,13 +83,21 @@ import com.ryanshelby.spw.wallet.ui.screens.SendTransferScreen
 import com.ryanshelby.spw.wallet.ui.screens.SettingsSecurityScreen
 import com.ryanshelby.spw.wallet.ui.screens.MiningScreen
 import com.ryanshelby.spw.wallet.ui.components.NotificationPermissionHandler
+import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBackground
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
 import com.ryanshelby.spw.wallet.ui.theme.MyApplicationTheme
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
+import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -144,7 +152,7 @@ class MainActivity : FragmentActivity() {
                             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                         ) {
-                            CyberBottomNavigationBar(
+                            FinanceBottomNavigationBar(
                                 currentRoute = currentRoute ?: "dashboard",
                                 onNavigate = { targetRoute ->
                                     HapticUtil.performKeyClick(context)
@@ -411,6 +419,7 @@ class MainActivity : FragmentActivity() {
                                     transactions = transactions,
                                     activeLanguage = activeLanguage,
                                     network = activeNetwork,
+                                    walletAddress = securityManager.getWalletAddress(),
                                     onBack = { navController.popBackStack() }
                                 )
                             }
@@ -503,7 +512,7 @@ class MainActivity : FragmentActivity() {
 }
 
 @Composable
-private fun CyberBottomNavigationBar(
+private fun FinanceBottomNavigationBar(
     currentRoute: String,
     onNavigate: (String) -> Unit
 ) {
@@ -511,58 +520,55 @@ private fun CyberBottomNavigationBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(GlassCardBackground)
-                .border(1.dp, GlassCardBorder, RoundedCornerShape(20.dp))
-                .shadow(elevation = 16.dp, shape = RoundedCornerShape(20.dp), spotColor = CyanNeon),
+                .background(SurfacePrimary)
+                .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp),
+                    .padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NavItem(
+                FinanceNavItem(
                     icon = Icons.Default.AccountBalanceWallet,
                     label = "Wallet",
                     isSelected = currentRoute == "dashboard",
                     onClick = { onNavigate("dashboard") }
                 )
-                NavItem(
+                FinanceNavItem(
                     icon = Icons.AutoMirrored.Filled.Send,
                     label = "Send",
                     isSelected = currentRoute.startsWith("send"),
-                    isGlowing = true,
                     onClick = { onNavigate("send") }
                 )
-                NavItem(
+                FinanceNavItem(
                     icon = Icons.AutoMirrored.Filled.CallReceived,
                     label = "Receive",
                     isSelected = currentRoute == "receive",
                     onClick = { onNavigate("receive") }
                 )
-                NavItem(
+                FinanceNavItem(
                     icon = ImageVector.vectorResource(id = R.drawable.ic_mining),
                     label = "Mining",
                     isSelected = currentRoute == "mining",
-                    isHighlighted = true,
                     onClick = { onNavigate("mining") }
                 )
-                NavItem(
+                FinanceNavItem(
                     icon = Icons.Default.History,
                     label = "Explorer",
                     isSelected = currentRoute == "history",
                     onClick = { onNavigate("history") }
                 )
-                NavItem(
+                FinanceNavItem(
                     icon = Icons.Default.Settings,
                     label = "Settings",
                     isSelected = currentRoute == "settings",
@@ -574,57 +580,40 @@ private fun CyberBottomNavigationBar(
 }
 
 @Composable
-private fun NavItem(
+private fun FinanceNavItem(
     icon: ImageVector,
     label: String,
     isSelected: Boolean,
-    isHighlighted: Boolean = false,
-    isGlowing: Boolean = false,
     onClick: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "glow")
-    val animatedColor by infiniteTransition.animateColor(
-        initialValue = CyanNeon,
-        targetValue = Color(0xFF00FFCC),
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowColor"
-    )
-    val activeColor = if (isGlowing) animatedColor else CyanNeon
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .bouncyClickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        val boxSize = if (isHighlighted) 36.dp else 30.dp
-        val iconSize = if (isHighlighted) 34.dp else 18.dp
-
         Box(
             modifier = Modifier
-                .size(boxSize)
-                .clip(CircleShape)
-                .background(if (isSelected) activeColor.copy(alpha = 0.18f) else Color.Transparent)
-                .then(if (isGlowing) Modifier.shadow(8.dp, CircleShape, spotColor = activeColor) else Modifier),
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (isSelected) SurfaceElevated else Color.Transparent),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (isSelected || isGlowing || isHighlighted) activeColor else TextSecondary,
-                modifier = Modifier.size(iconSize)
+                tint = if (isSelected) TextPrimary else TextMuted,
+                modifier = Modifier.size(19.dp)
             )
         }
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
-            color = if (isSelected || isGlowing || isHighlighted) activeColor else TextMuted,
-            fontSize = if (isHighlighted) 10.sp else 9.5.sp,
-            fontWeight = if (isSelected || isHighlighted || isGlowing) FontWeight.Bold else FontWeight.Medium
+            color = if (isSelected) TextPrimary else TextMuted,
+            fontSize = 10.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
         )
     }
 }

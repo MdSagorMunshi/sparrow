@@ -1,13 +1,30 @@
 package com.ryanshelby.spw.wallet.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -15,7 +32,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,30 +60,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ryanshelby.spw.wallet.R
 import com.ryanshelby.spw.wallet.security.HapticUtil
-import com.ryanshelby.spw.wallet.ui.theme.*
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.SemanticErrorMuted
+import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.TextMuted
+import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
+import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import java.util.Locale
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.random.Random
 
 /**
  * Transaction status states for the send-coin flow animation overlay.
  */
 enum class TxOverlayState {
     HIDDEN,
-    BROADCASTING,   // Pending — coin pulsing + progress ring
-    SUCCESS,         // Checkmark morph + particle burst
-    FAILURE          // X morph + shake + red pulse
+    BROADCASTING,
+    SUCCESS,
+    FAILURE
 }
 
 /**
- * Full-screen animated overlay for the send-coin transaction flow.
- *
- * Shows:
- * - BROADCASTING: SPW coin icon with soft pulse + thin progress ring
- * - SUCCESS: Coin morphs to checkmark, radial particle burst, details slide in
- * - FAILURE: Coin morphs to X, horizontal shake, red glow, error text
+ * Full-screen animated overlay for the financial transaction broadcast flow.
+ * Precision engineered with high-trust confirmation visuals.
  */
 @Composable
 fun TransactionStatusOverlay(
@@ -74,12 +100,9 @@ fun TransactionStatusOverlay(
     if (state == TxOverlayState.HIDDEN) return
 
     val context = LocalContext.current
-
-    // ── Entry animation ─────────────────────────────────────
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(state) { visible = true }
 
-    // ── Fire haptics on result ──────────────────────────────
     LaunchedEffect(state) {
         if (state == TxOverlayState.SUCCESS) {
             HapticUtil.performSuccess(context)
@@ -96,14 +119,14 @@ fun TransactionStatusOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(DarkBackground.copy(alpha = 0.96f)),
+                .background(FinanceBackground.copy(alpha = 0.97f)),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
+                    .padding(horizontal = 28.dp)
             ) {
                 when (state) {
                     TxOverlayState.BROADCASTING -> BroadcastingContent()
@@ -124,76 +147,35 @@ fun TransactionStatusOverlay(
     }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BROADCASTING — coin pulse + progress ring
-// ══════════════════════════════════════════════════════════════
 @Composable
 private fun BroadcastingContent() {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val infiniteTransition = rememberInfiniteTransition(label = "broadcastPulse")
 
-    // Soft scale pulse 0.92 -> 1.08
     val scale by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
+        initialValue = 0.96f,
+        targetValue = 1.04f,
         animationSpec = infiniteRepeatable(
             animation = tween(900, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "coinPulse"
+        label = "coinScale"
     )
 
-    // Glow alpha pulse
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.15f,
-        targetValue = 0.45f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowPulse"
-    )
-
-    // Progress ring sweep angle (loops from 0 to 360)
-    val sweepAngle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "progressSweep"
-    )
-
-    // Ring start rotation
     val ringRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
+            animation = tween(2200, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "ringRotation"
+        label = "ringSpin"
     )
 
     Box(
-        modifier = Modifier.size(140.dp),
+        modifier = Modifier.size(130.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Outer glow circle
-        Canvas(modifier = Modifier.size(140.dp)) {
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        CyanNeon.copy(alpha = glowAlpha),
-                        PurpleNeon.copy(alpha = glowAlpha * 0.5f),
-                        Color.Transparent
-                    ),
-                    radius = size.minDimension / 2
-                )
-            )
-        }
-
-        // Progress ring
+        // Subtle spinning progress ring with emerald accent
         Canvas(
             modifier = Modifier
                 .size(120.dp)
@@ -202,24 +184,23 @@ private fun BroadcastingContent() {
             drawArc(
                 brush = Brush.sweepGradient(
                     colors = listOf(
-                        CyanNeon.copy(alpha = 0.8f),
-                        PurpleNeon.copy(alpha = 0.6f),
-                        CyanNeon.copy(alpha = 0.1f)
+                        AccentPrimary,
+                        BorderSubtle,
+                        Color.Transparent
                     )
                 ),
                 startAngle = -90f,
-                sweepAngle = sweepAngle * 0.7f, // never quite fills completely
+                sweepAngle = 240f,
                 useCenter = false,
-                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
             )
         }
 
-        // SPW Coin Icon (real app asset)
         Icon(
             painter = painterResource(id = R.drawable.ic_launcher_foreground),
             contentDescription = "SPW Coin",
             modifier = Modifier
-                .size(72.dp)
+                .size(64.dp)
                 .scale(scale),
             tint = Color.Unspecified
         )
@@ -231,20 +212,17 @@ private fun BroadcastingContent() {
         text = "Broadcasting Transaction",
         color = TextPrimary,
         fontSize = 18.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.SemiBold
     )
     Spacer(modifier = Modifier.height(6.dp))
     Text(
-        text = "Signing & submitting to SPW mempool…",
+        text = "Signing & submitting to SPW consensus network…",
         color = TextSecondary,
         fontSize = 13.sp,
         textAlign = TextAlign.Center
     )
 }
 
-// ══════════════════════════════════════════════════════════════
-//  SUCCESS — checkmark morph + particles + details slide-in
-// ══════════════════════════════════════════════════════════════
 @Composable
 private fun SuccessContent(
     txHash: String?,
@@ -252,91 +230,31 @@ private fun SuccessContent(
     recipientAddress: String,
     onDismiss: () -> Unit
 ) {
-    // Phase control — icon morphs then details slide in
-    var phase by remember { mutableIntStateOf(0) } // 0 = morph, 1 = show details
+    var phase by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
-        delay(1200) // checkmark morph + particles play out
+        delay(900)
         phase = 1
     }
 
-    // Icon morph: starts as coin scale -> 0, checkmark scale 0 -> 1
     val morphProgress by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = tween(600, easing = FastOutSlowInEasing),
-        label = "morph"
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label = "successMorph"
     )
 
-    // Circle stroke draw-in
     val circleSweep by animateFloatAsState(
         targetValue = 360f,
-        animationSpec = tween(800, easing = FastOutSlowInEasing),
-        label = "circleStroke"
+        animationSpec = tween(700, easing = FastOutSlowInEasing),
+        label = "successCircle"
     )
-
-    // Particle burst
-    val particleAlpha by animateFloatAsState(
-        targetValue = 0f,
-        animationSpec = tween(1000, delayMillis = 300, easing = LinearEasing),
-        label = "particleFade"
-    )
-
-    val particleScale by animateFloatAsState(
-        targetValue = 2.5f,
-        animationSpec = tween(1000, delayMillis = 200, easing = FastOutSlowInEasing),
-        label = "particleScale"
-    )
-
-    // Generate consistent particles
-    val particles = remember {
-        List(16) {
-            val angle = (it * 22.5f) + Random.nextFloat() * 10f
-            val speed = 0.6f + Random.nextFloat() * 0.4f
-            val size = 3f + Random.nextFloat() * 4f
-            val colorIndex = it % 3
-            Triple(angle, speed, Pair(size, colorIndex))
-        }
-    }
 
     Box(
-        modifier = Modifier.size(140.dp),
+        modifier = Modifier.size(120.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Particle burst canvas
-        Canvas(
-            modifier = Modifier
-                .size(140.dp)
-                .scale(particleScale)
-                .alpha(1f - morphProgress * 0.3f + particleAlpha)
-        ) {
-            val centerX = size.width / 2
-            val centerY = size.height / 2
-            val baseRadius = size.minDimension * 0.25f
-
-            particles.forEach { (angle, speed, sizeAndColor) ->
-                val (dotSize, colorIndex) = sizeAndColor
-                val radians = Math.toRadians(angle.toDouble())
-                val distance = baseRadius * speed * particleScale
-                val x = centerX + (cos(radians) * distance).toFloat()
-                val y = centerY + (sin(radians) * distance).toFloat()
-
-                val color = when (colorIndex) {
-                    0 -> CyanNeon
-                    1 -> PurpleNeon
-                    else -> GreenEmerald
-                }.copy(alpha = (1f - particleAlpha.coerceIn(0f, 1f)).coerceIn(0f, 0.9f))
-
-                drawCircle(
-                    color = color,
-                    radius = dotSize,
-                    center = Offset(x, y)
-                )
-            }
-        }
-
-        // Circle stroke around checkmark
-        Canvas(modifier = Modifier.size(100.dp)) {
+        Canvas(modifier = Modifier.size(90.dp)) {
             drawArc(
-                color = GreenEmerald,
+                color = SemanticPositive,
                 startAngle = -90f,
                 sweepAngle = circleSweep,
                 useCenter = false,
@@ -344,37 +262,22 @@ private fun SuccessContent(
             )
         }
 
-        // Morph: Coin fades out as checkmark fades in
-        // Coin icon (fading out)
-        Icon(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = null,
-            modifier = Modifier
-                .size(64.dp)
-                .alpha((1f - morphProgress * 1.5f).coerceIn(0f, 1f))
-                .scale(1f - morphProgress * 0.3f),
-            tint = Color.Unspecified
-        )
-
-        // Checkmark (fading in)
         Text(
             text = "✓",
-            fontSize = 48.sp,
+            fontSize = 42.sp,
             fontWeight = FontWeight.Bold,
-            color = GreenEmerald.copy(alpha = (morphProgress * 2f - 0.5f).coerceIn(0f, 1f)),
-            modifier = Modifier
-                .scale((morphProgress * 1.2f).coerceIn(0.5f, 1f))
+            color = SemanticPositive.copy(alpha = (morphProgress * 2f - 0.5f).coerceIn(0f, 1f)),
+            modifier = Modifier.scale((morphProgress * 1.2f).coerceIn(0.5f, 1f))
         )
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(20.dp))
 
-    // Details slide in after morph completes
     AnimatedVisibility(
         visible = phase >= 1,
-        enter = fadeIn(tween(400)) + slideInVertically(
-            initialOffsetY = { it / 3 },
-            animationSpec = tween(400, easing = FastOutSlowInEasing)
+        enter = fadeIn(tween(350)) + slideInVertically(
+            initialOffsetY = { it / 4 },
+            animationSpec = tween(350, easing = FastOutSlowInEasing)
         )
     ) {
         Column(
@@ -382,67 +285,62 @@ private fun SuccessContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Transfer Successful",
-                color = GreenEmerald,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                text = "Transaction Broadcasted",
+                color = SemanticPositive,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Sent amount
-            Text(
-                text = String.format(Locale.US, "%.8f", sentAmount)
-                    .trimEnd('0')
-                    .let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
-                color = TextPrimary,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Recipient
-            if (recipientAddress.isNotBlank()) {
-                Text(
-                    text = "To",
-                    color = TextMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = recipientAddress,
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // TX Hash
-            if (!txHash.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(DarkSurfaceElevated)
-                        .padding(10.dp)
-                ) {
+            // Sent amount card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(SurfacePrimary)
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
+                    .padding(18.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "TXID: $txHash",
-                        color = CyanNeon,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        text = "AMOUNT SENT",
+                        color = TextMuted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "-" + String.format(Locale.US, "%.8f", sentAmount)
+                            .trimEnd('0')
+                            .let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
+                        color = SemanticError,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.SansSerif
+                    )
+
+                    if (recipientAddress.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "To: ${if (recipientAddress.length > 20) "${recipientAddress.take(8)}...${recipientAddress.takeLast(8)}" else recipientAddress}",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    if (!txHash.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "TXID: ${if (txHash.length > 22) "${txHash.take(10)}...${txHash.takeLast(10)}" else txHash}",
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             }
 
@@ -451,183 +349,107 @@ private fun SuccessContent(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenEmerald,
-                    contentColor = DarkBackground
+                    containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary,
+                    contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
                 ),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
-                Text("Done", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("Done", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText)
             }
         }
     }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  FAILURE — X morph + shake + red pulse + error message
-// ══════════════════════════════════════════════════════════════
 @Composable
 private fun FailureContent(
     errorMessage: String,
     onDismiss: () -> Unit
 ) {
-    // Horizontal shake
     val shakeOffset by animateFloatAsState(
         targetValue = 0f,
         animationSpec = keyframes {
-            durationMillis = 500
+            durationMillis = 450
             0f at 0
-            -18f at 60
-            18f at 120
-            -14f at 180
-            14f at 240
-            -8f at 300
-            8f at 360
-            -4f at 420
-            0f at 500
+            -14f at 60
+            14f at 120
+            -10f at 180
+            10f at 240
+            -6f at 300
+            6f at 360
+            0f at 450
         },
-        label = "shake"
+        label = "errorShake"
     )
-
-    // Red glow pulse
-    val redGlowAlpha by animateFloatAsState(
-        targetValue = 0.1f,
-        animationSpec = tween(800, easing = FastOutSlowInEasing),
-        label = "redGlow"
-    )
-    val redGlowInitial by animateFloatAsState(
-        targetValue = 0f,
-        animationSpec = keyframes {
-            durationMillis = 800
-            0.6f at 100
-            0.35f at 400
-            0.1f at 800
-        },
-        label = "redGlowFlash"
-    )
-
-    // Morph progress
-    val morphProgress by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(500, easing = FastOutSlowInEasing),
-        label = "failMorph"
-    )
-
-    // Details visibility
-    var showDetails by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(700)
-        showDetails = true
-    }
 
     Box(
         modifier = Modifier
-            .size(140.dp)
+            .size(110.dp)
             .graphicsLayer { translationX = shakeOffset },
         contentAlignment = Alignment.Center
     ) {
-        // Red glow background
-        Canvas(modifier = Modifier.size(140.dp)) {
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        RedCoral.copy(alpha = redGlowInitial.coerceAtLeast(redGlowAlpha)),
-                        Color.Transparent
-                    ),
-                    radius = size.minDimension / 2
-                )
-            )
-        }
-
-        // Circle stroke (red)
-        Canvas(modifier = Modifier.size(100.dp)) {
+        Canvas(modifier = Modifier.size(90.dp)) {
             drawArc(
-                color = RedCoral,
+                color = SemanticError,
                 startAngle = -90f,
-                sweepAngle = morphProgress * 360f,
+                sweepAngle = 360f,
                 useCenter = false,
                 style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
             )
         }
 
-        // Coin fading out
-        Icon(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = null,
-            modifier = Modifier
-                .size(64.dp)
-                .alpha((1f - morphProgress * 1.5f).coerceIn(0f, 1f))
-                .scale(1f - morphProgress * 0.3f),
-            tint = Color.Unspecified
-        )
-
-        // X mark fading in
         Text(
             text = "✕",
-            fontSize = 44.sp,
+            fontSize = 40.sp,
             fontWeight = FontWeight.Bold,
-            color = RedCoral.copy(alpha = (morphProgress * 2f - 0.5f).coerceIn(0f, 1f)),
-            modifier = Modifier.scale((morphProgress * 1.2f).coerceIn(0.5f, 1f))
+            color = SemanticError
+        )
+    }
+
+    Spacer(modifier = Modifier.height(22.dp))
+
+    Text(
+        text = "Transaction Failed",
+        color = SemanticError,
+        fontSize = 19.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+
+    Spacer(modifier = Modifier.height(14.dp))
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SemanticErrorMuted)
+            .border(1.dp, SemanticError.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+            .padding(14.dp)
+    ) {
+        Text(
+            text = errorMessage,
+            color = TextPrimary,
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+            lineHeight = 18.sp
         )
     }
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    AnimatedVisibility(
-        visible = showDetails,
-        enter = fadeIn(tween(400)) + slideInVertically(
-            initialOffsetY = { it / 3 },
-            animationSpec = tween(400, easing = FastOutSlowInEasing)
-        )
+    Button(
+        onClick = onDismiss,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = SurfaceElevated,
+            contentColor = TextPrimary
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "Transaction Failed",
-                color = RedCoral,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Error reason box
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(RedCoral.copy(alpha = 0.08f))
-                    .padding(14.dp)
-            ) {
-                Text(
-                    text = errorMessage,
-                    color = RedCoral.copy(alpha = 0.9f),
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    lineHeight = 18.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkSurfaceElevated,
-                    contentColor = TextPrimary
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Text("Dismiss", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
-        }
+        Text("Dismiss", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
     }
 }

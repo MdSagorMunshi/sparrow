@@ -1,11 +1,5 @@
 package com.ryanshelby.spw.wallet.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -35,11 +27,18 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import com.ryanshelby.spw.wallet.ui.theme.CyanGlow
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
-import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderStrong
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 
+/**
+ * Institutional High-Contrast QR Code View
+ * Renders an optimized matrix with clean financial framing, removing neon/laser distractions.
+ */
 @Composable
 fun GlowingQrCodeView(
     data: String,
@@ -47,19 +46,7 @@ fun GlowingQrCodeView(
     sizeDp: Dp = 220.dp,
     showScannerEffect: Boolean = false
 ) {
-    val transition = rememberInfiniteTransition(label = "scan")
-    val scanLineY by transition.animateFloat(
-        initialValue = 0.05f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scanY"
-    )
-
-    // Generate a REAL scannable QR code matrix using ZXing
-    // Error Correction Level H = 30% recovery, allowing the center SPW badge to safely overlay
+    // Generate a high-contrast QR code matrix using ZXing with H error correction
     val matrix = remember(data) {
         if (data.isBlank()) null
         else {
@@ -87,93 +74,67 @@ fun GlowingQrCodeView(
     Box(
         modifier = modifier
             .size(sizeDp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(DarkBackground)
-            .border(
-                width = 1.5.dp,
-                brush = Brush.linearGradient(listOf(CyanNeon, PurpleNeon)),
-                shape = RoundedCornerShape(24.dp)
-            )
+            .clip(RoundedCornerShape(20.dp))
+            .background(SurfacePrimary)
+            .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp))
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Inner container for QR padding
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             if (matrix != null) {
-            val gridSize = matrix.size
-            // The center badge occupies ~18% of the QR grid (safely within H-level 30% error tolerance)
-            val badgeRadiusFraction = 0.09f
+                val gridSize = matrix.size
+                val badgeRadiusFraction = 0.09f
 
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val canvasWidth = size.width
-                val cellSize = canvasWidth / gridSize.toFloat()
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val canvasWidth = size.width
+                    val cellSize = canvasWidth / gridSize.toFloat()
 
-                val centerX = gridSize / 2f
-                val centerY = gridSize / 2f
-                val badgeRadius = gridSize * badgeRadiusFraction
+                    val centerX = gridSize / 2f
+                    val centerY = gridSize / 2f
+                    val badgeRadius = gridSize * badgeRadiusFraction
 
-                // Draw QR modules as rounded white rectangles on dark background
-                for (r in 0 until gridSize) {
-                    for (c in 0 until gridSize) {
-                        // Skip modules under the center badge area
-                        val dx = c + 0.5f - centerX
-                        val dy = r + 0.5f - centerY
-                        if (dx * dx + dy * dy < badgeRadius * badgeRadius) continue
+                    // High-contrast clean white modules on dark background
+                    for (r in 0 until gridSize) {
+                        for (c in 0 until gridSize) {
+                            val dx = c + 0.5f - centerX
+                            val dy = r + 0.5f - centerY
+                            if (dx * dx + dy * dy < badgeRadius * badgeRadius) continue
 
-                        if (matrix[r][c]) {
-                            val topLeft = Offset(c * cellSize + 0.5f, r * cellSize + 0.5f)
-                            drawRoundRect(
-                                color = Color.White,
-                                topLeft = topLeft,
-                                size = Size(cellSize - 1f, cellSize - 1f), // Add gap between dots
-                                cornerRadius = CornerRadius(3f, 3f)
-                            )
+                            if (matrix[r][c]) {
+                                val topLeft = Offset(c * cellSize + 0.5f, r * cellSize + 0.5f)
+                                drawRoundRect(
+                                    color = Color(0xFFF9FAFB),
+                                    topLeft = topLeft,
+                                    size = Size(cellSize - 0.8f, cellSize - 0.8f),
+                                    cornerRadius = CornerRadius(2.5f, 2.5f)
+                                )
+                            }
                         }
                     }
                 }
 
-                // Draw animated scanning beam if requested
-                if (showScannerEffect) {
-                    val yPos = size.height * scanLineY
-                    drawLine(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                CyanNeon,
-                                Color.White,
-                                CyanNeon,
-                                Color.Transparent
-                            )
-                        ),
-                        start = Offset(0f, yPos),
-                        end = Offset(size.width, yPos),
-                        strokeWidth = 3.dp.toPx()
+                // Clean center SPW badge
+                Box(
+                    modifier = Modifier
+                        .size((sizeDp.value * 0.2f).dp)
+                        .clip(CircleShape)
+                        .background(FinanceBackground)
+                        .border(1.dp, BorderStrong, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SPW",
+                        color = AccentPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
-
-        // Center Sparrow Emblem Badge
-        Box(
-            modifier = Modifier
-                .size((sizeDp.value * 0.22f).dp)
-                .clip(CircleShape)
-                .background(DarkBackground)
-                .border(1.5.dp, CyanGlow, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "SPW",
-                color = CyanNeon,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Black
-            )
-        }
-        } // Close inner Box
     }
 }

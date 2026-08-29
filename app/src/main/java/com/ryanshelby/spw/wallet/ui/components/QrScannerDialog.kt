@@ -75,12 +75,19 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.ryanshelby.spw.wallet.security.HapticUtil
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.CyanGlow
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBackground
 import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
+import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
 import java.util.concurrent.Executors
@@ -217,7 +224,7 @@ fun QrScannerDialog(
                 )
 
                 // Darkened Overlay with Viewfinder cutout
-                CyberViewfinderOverlay()
+                ViewfinderOverlay()
 
                 // Top Bar with Controls
                 Row(
@@ -249,13 +256,13 @@ fun QrScannerDialog(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(if (isTorchOn) CyanNeon else DarkSurfaceElevated.copy(alpha = 0.85f))
-                                .border(1.dp, GlassCardBorder, CircleShape)
+                                .background(if (isTorchOn) AccentPrimary else SurfaceElevated.copy(alpha = 0.9f))
+                                .border(1.dp, BorderSubtle, CircleShape)
                         ) {
                             Icon(
                                 imageVector = if (isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                                 contentDescription = "Toggle Torch",
-                                tint = if (isTorchOn) DarkBackground else TextPrimary
+                                tint = if (isTorchOn) FinanceBackground else TextPrimary
                             )
                         }
 
@@ -265,10 +272,10 @@ fun QrScannerDialog(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(DarkSurfaceElevated.copy(alpha = 0.85f))
-                                .border(1.dp, GlassCardBorder, CircleShape)
+                                .background(SurfaceElevated.copy(alpha = 0.9f))
+                                .border(1.dp, BorderSubtle, CircleShape)
                         ) {
-                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Import from Photos", tint = CyanNeon)
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Import from Photos", tint = TextPrimary)
                         }
                     }
                 }
@@ -310,11 +317,11 @@ fun QrScannerDialog(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(CyanNeon.copy(alpha = 0.15f))
-                            .border(1.dp, CyanNeon, CircleShape),
+                            .background(SurfaceSubtle)
+                            .border(1.dp, BorderSubtle, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(36.dp))
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -339,11 +346,11 @@ fun QrScannerDialog(
 
                     Button(
                         onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = DarkBackground),
+                        colors = ButtonDefaults.buttonColors(containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text("Grant Camera Permission", fontWeight = FontWeight.Bold, color = DarkBackground)
+                        Text("Grant Camera Permission", fontWeight = FontWeight.Bold, color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText)
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -371,18 +378,7 @@ fun QrScannerDialog(
 }
 
 @Composable
-private fun CyberViewfinderOverlay() {
-    val transition = rememberInfiniteTransition(label = "scanLine")
-    val scanOffset by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 240f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "offset"
-    )
-
+private fun ViewfinderOverlay() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -392,51 +388,32 @@ private fun CyberViewfinderOverlay() {
             modifier = Modifier
                 .size(250.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .border(1.5.dp, GlassCardBorder, RoundedCornerShape(20.dp))
+                .border(1.5.dp, BorderSubtle, RoundedCornerShape(20.dp))
         ) {
-            // Neon Cyber Corner Accents
+            // Clean Corner Accents
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .align(Alignment.TopStart)
-                    .border(3.dp, CyanNeon, RoundedCornerShape(topStart = 16.dp))
+                    .border(2.5.dp, com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, RoundedCornerShape(topStart = 16.dp))
             )
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .align(Alignment.TopEnd)
-                    .border(3.dp, CyanNeon, RoundedCornerShape(topEnd = 16.dp))
+                    .border(2.5.dp, com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, RoundedCornerShape(topEnd = 16.dp))
             )
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .align(Alignment.BottomStart)
-                    .border(3.dp, CyanNeon, RoundedCornerShape(bottomStart = 16.dp))
+                    .border(2.5.dp, com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, RoundedCornerShape(bottomStart = 16.dp))
             )
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .align(Alignment.BottomEnd)
-                    .border(3.dp, CyanNeon, RoundedCornerShape(bottomEnd = 16.dp))
-            )
-
-            // Animated Laser Scanning Line
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .offset(y = scanOffset.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                CyanNeon,
-                                Color.White,
-                                CyanNeon,
-                                Color.Transparent
-                            )
-                        )
-                    )
+                    .border(2.5.dp, com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary, RoundedCornerShape(bottomEnd = 16.dp))
             )
         }
     }

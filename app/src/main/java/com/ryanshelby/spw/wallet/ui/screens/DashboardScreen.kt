@@ -1,5 +1,6 @@
 package com.ryanshelby.spw.wallet.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,20 +17,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,14 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import android.widget.Toast
-import com.ryanshelby.spw.wallet.security.QrUriParser
-import com.ryanshelby.spw.wallet.ui.components.QrScannerDialog
-import com.ryanshelby.spw.wallet.ui.components.TransactionDetailDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -56,24 +48,32 @@ import com.ryanshelby.spw.wallet.data.model.AppLanguage
 import com.ryanshelby.spw.wallet.data.model.CryptoAsset
 import com.ryanshelby.spw.wallet.data.model.NetworkConfig
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
+import com.ryanshelby.spw.wallet.data.model.TransactionStatus
 import com.ryanshelby.spw.wallet.data.model.TransactionType
 import com.ryanshelby.spw.wallet.data.model.TranslationHelper
 import com.ryanshelby.spw.wallet.security.HapticUtil
+import com.ryanshelby.spw.wallet.security.QrUriParser
 import com.ryanshelby.spw.wallet.security.SPWCrypto
-import com.ryanshelby.spw.wallet.ui.components.GlassCard
-import com.ryanshelby.spw.wallet.ui.components.Holographic3DCard
-import com.ryanshelby.spw.wallet.ui.theme.CyanGlow
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
-import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBackground
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
-import com.ryanshelby.spw.wallet.ui.theme.GreenEmerald
-import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
-import com.ryanshelby.spw.wallet.ui.theme.RedCoral
+import com.ryanshelby.spw.wallet.ui.components.FinanceCard
+import com.ryanshelby.spw.wallet.ui.components.PortfolioOverviewCard
+import com.ryanshelby.spw.wallet.ui.components.QrScannerDialog
+import com.ryanshelby.spw.wallet.ui.components.TransactionDetailDialog
+import com.ryanshelby.spw.wallet.ui.components.TransactionRowSkeleton
+import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
+import com.ryanshelby.spw.wallet.ui.theme.SemanticWarning
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
+import com.ryanshelby.spw.wallet.ui.theme.staggeredEntrance
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -129,6 +129,7 @@ fun DashboardScreen(
     selectedTxForDetails?.let { tx ->
         TransactionDetailDialog(
             tx = tx,
+            walletAddress = walletAddress,
             onDismiss = { selectedTxForDetails = null }
         )
     }
@@ -136,14 +137,14 @@ fun DashboardScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(FinanceBackground)
             .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // 1. 3D Holographic Cyber Card (contains sleek QR Scan and Show buttons)
+        // 1. Institutional Portfolio Balance Card
         item {
-            Holographic3DCard(
+            PortfolioOverviewCard(
                 isSyncing = isSyncing,
                 walletName = walletName,
                 walletAddress = walletAddress,
@@ -158,7 +159,7 @@ fun DashboardScreen(
             )
         }
 
-        // 2. Quick Action Buttons Row (Send, Receive, Cold Vault, History)
+        // 2. Quick Action Buttons Row (Send, Receive, Explorer, Mining)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -168,7 +169,6 @@ fun DashboardScreen(
                 QuickActionButton(
                     icon = Icons.AutoMirrored.Filled.Send,
                     label = strings.send,
-                    accentColor = CyanNeon,
                     onClick = {
                         HapticUtil.lightTap(context)
                         onNavigateToSend(null)
@@ -177,27 +177,22 @@ fun DashboardScreen(
                 QuickActionButton(
                     icon = Icons.AutoMirrored.Filled.CallReceived,
                     label = strings.receive,
-                    accentColor = GreenEmerald,
                     onClick = {
                         HapticUtil.lightTap(context)
                         onNavigateToReceive()
                     }
                 )
-
                 QuickActionButton(
                     icon = Icons.Default.History,
                     label = "Explorer",
-                    accentColor = Color(0xFFFFB300),
                     onClick = {
                         HapticUtil.lightTap(context)
                         onNavigateToHistory()
                     }
                 )
-
                 QuickActionButton(
                     icon = Icons.Default.Security,
                     label = "Mining",
-                    accentColor = CyanNeon,
                     onClick = {
                         HapticUtil.lightTap(context)
                         onNavigateToMining()
@@ -206,25 +201,24 @@ fun DashboardScreen(
             }
         }
 
-        // 3. SPW Core Network Asset Status
+        // 3. SPW Core Layer 1 Asset Row
         item {
             Column {
                 Text(
-                    text = "SPW NATIVE ASSET",
+                    text = "LAYER 1 ASSET",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            HapticUtil.lightTap(context)
-                            onNavigateToSend("SPW")
-                        }
+                FinanceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        HapticUtil.lightTap(context)
+                        onNavigateToSend("SPW")
+                    }
                 ) {
                     Row(
                         modifier = Modifier
@@ -236,20 +230,17 @@ fun DashboardScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(42.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        Brush.radialGradient(
-                                            colors = listOf(CyanNeon, Color(0xFF0D253F))
-                                        )
-                                    ),
+                                    .background(SurfaceSubtle)
+                                    .border(1.dp, BorderSubtle, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "SPW",
-                                    fontWeight = FontWeight.Black,
+                                    fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp,
-                                    color = DarkBackground
+                                    color = TextPrimary
                                 )
                             }
 
@@ -261,18 +252,19 @@ fun DashboardScreen(
                                         text = "Sparrow",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = TextPrimary,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(4.dp))
-                                            .background(CyanNeon.copy(alpha = 0.15f))
+                                            .background(SurfaceElevated)
+                                            .border(0.8.dp, BorderSubtle, RoundedCornerShape(4.dp))
                                             .padding(horizontal = 5.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = "Layer 1 Native",
-                                            color = CyanNeon,
+                                            text = "Native",
+                                            color = TextSecondary,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -292,15 +284,15 @@ fun DashboardScreen(
                                     text = "••••••",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             } else {
                                 Text(
                                     text = String.format(Locale.US, "%.8f", totalBalanceSpw).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = TextPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.SansSerif
                                 )
                                 Text(
                                     text = NumberFormat.getNumberInstance(Locale.US).format(
@@ -317,9 +309,9 @@ fun DashboardScreen(
             }
         }
 
-        // 4. On-Chain Security Features Banner
+        // 4. On-Chain Security Features Card
         item {
-            GlassCard(modifier = Modifier.fillMaxWidth()) {
+            FinanceCard(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -328,17 +320,17 @@ fun DashboardScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(DarkSurfaceElevated)
-                            .border(1.dp, PurpleNeon.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+                            .background(SurfaceSubtle)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shield,
                             contentDescription = null,
-                            tint = PurpleNeon,
-                            modifier = Modifier.size(20.dp)
+                            tint = TextPrimary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -346,7 +338,7 @@ fun DashboardScreen(
                         Text(
                             text = "Dual-Key Stealth & Offline Vaults",
                             color = TextPrimary,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp
                         )
                         Text(
@@ -367,28 +359,38 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "ON-CHAIN ACTIVITY",
+                    text = "RECENT ACTIVITY",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextMuted,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp
                 )
                 Text(
                     text = "View All",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CyanNeon,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        HapticUtil.lightTap(context)
-                        onNavigateToHistory()
-                    }
+                    color = TextSecondary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .bouncyClickable {
+                            HapticUtil.lightTap(context)
+                            onNavigateToHistory()
+                        }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
 
-        if (transactions.isEmpty()) {
+        if (isSyncing && transactions.isEmpty()) {
             item {
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TransactionRowSkeleton()
+                    TransactionRowSkeleton()
+                }
+            }
+        } else if (transactions.isEmpty()) {
+            item {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -399,18 +401,18 @@ fun DashboardScreen(
                             imageVector = Icons.Default.History,
                             contentDescription = null,
                             tint = TextMuted,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(32.dp)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = "No on-chain transactions yet",
                             color = TextPrimary,
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Send or receive SPW on the network to see live block activity here.",
+                            text = "Transactions broadcasted or received on the SPW node will appear here.",
                             color = TextMuted,
                             fontSize = 11.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -419,9 +421,11 @@ fun DashboardScreen(
                 }
             }
         } else {
-            items(transactions.take(5)) { tx ->
+            itemsIndexed(transactions.take(5)) { index, tx ->
                 TransactionRowCard(
                     tx = tx,
+                    walletAddress = walletAddress,
+                    modifier = Modifier.staggeredEntrance(index),
                     onClick = {
                         HapticUtil.lightTap(context)
                         selectedTxForDetails = tx
@@ -436,26 +440,29 @@ fun DashboardScreen(
 fun QuickActionButton(
     icon: ImageVector,
     label: String,
-    accentColor: Color,
+    accent: Color = TextPrimary,
     onClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .bouncyClickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(54.dp)
+                .size(52.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(DarkSurfaceElevated)
-                .border(1.dp, GlassCardBorder, RoundedCornerShape(16.dp)),
+                .background(SurfacePrimary)
+                .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = accentColor,
-                modifier = Modifier.size(24.dp)
+                tint = accent,
+                modifier = Modifier.size(22.dp)
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
@@ -469,18 +476,30 @@ fun QuickActionButton(
 }
 
 @Composable
-fun TransactionRowCard(tx: TransactionItem, onClick: () -> Unit = {}) {
-    val isIncoming = tx.type == TransactionType.RECEIVE
+fun TransactionRowCard(
+    tx: TransactionItem,
+    modifier: Modifier = Modifier,
+    walletAddress: String = "",
+    onClick: () -> Unit = {}
+) {
+    val isIncoming = when (tx.type) {
+        TransactionType.RECEIVE -> true
+        TransactionType.SEND -> false
+        TransactionType.STEALTH -> {
+            if (walletAddress.isNotBlank() && tx.fromAddress.equals(walletAddress, ignoreCase = true)) {
+                false
+            } else {
+                true
+            }
+        }
+    }
     val isStealth = tx.type == TransactionType.STEALTH
 
-    val iconColor = when {
-        isStealth -> CyanNeon
-        isIncoming -> GreenEmerald
-        else -> RedCoral
-    }
+    val amountColor = if (isIncoming) SemanticPositive else SemanticError
+    val iconColor = if (isIncoming) SemanticPositive else SemanticError
 
     val typeLabel = when {
-        isStealth -> "Stealth Shielded"
+        isStealth -> if (isIncoming) "Stealth Received" else "Stealth Sent"
         isIncoming -> "Received"
         else -> "Sent"
     }
@@ -490,7 +509,11 @@ fun TransactionRowCard(tx: TransactionItem, onClick: () -> Unit = {}) {
         sdf.format(Date(tx.timestamp))
     }
 
-    GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+    FinanceCard(
+        modifier = modifier
+            .fillMaxWidth(),
+        onClick = onClick
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -503,14 +526,18 @@ fun TransactionRowCard(tx: TransactionItem, onClick: () -> Unit = {}) {
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(iconColor.copy(alpha = 0.15f)),
+                        .background(SurfaceSubtle),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (isIncoming) Icons.AutoMirrored.Filled.CallReceived else Icons.AutoMirrored.Filled.Send,
+                        imageVector = when {
+                            isStealth -> Icons.Default.Shield
+                            isIncoming -> Icons.AutoMirrored.Filled.CallReceived
+                            else -> Icons.AutoMirrored.Filled.Send
+                        },
                         contentDescription = null,
                         tint = iconColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                 }
 
@@ -521,7 +548,7 @@ fun TransactionRowCard(tx: TransactionItem, onClick: () -> Unit = {}) {
                         text = typeLabel,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = if (tx.txHash.length > 14) "${tx.txHash.take(6)}...${tx.txHash.takeLast(6)}" else tx.txHash,
@@ -543,14 +570,14 @@ fun TransactionRowCard(tx: TransactionItem, onClick: () -> Unit = {}) {
                 Text(
                     text = (if (isIncoming) "+" else "-") + String.format(Locale.US, "%.8f", tx.amountSpw).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isIncoming) GreenEmerald else TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
+                    color = amountColor,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.SansSerif
                 )
                 Text(
                     text = tx.status.name,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (tx.status.name == "CONFIRMED") GreenEmerald else Color(0xFFFFB300),
+                    color = if (tx.status == TransactionStatus.CONFIRMED) SemanticPositive else SemanticWarning,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )

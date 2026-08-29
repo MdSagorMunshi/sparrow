@@ -5,20 +5,27 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
 
@@ -26,13 +33,11 @@ import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
 fun NotificationPermissionHandler() {
     val context = LocalContext.current
     var showExplanationDialog by remember { mutableStateOf(false) }
-    var hasAskedBefore by remember { mutableStateOf(false) } // In a real app this would be in DataStore/SharedPreferences
+    var hasAskedBefore by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        // We do nothing else; if granted, the OS allows it. If denied, we respect it.
-    }
+    ) { isGranted -> }
 
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -41,7 +46,6 @@ fun NotificationPermissionHandler() {
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
             
-            // For this version we simulate checking if we asked. We just ask once per app launch if not granted.
             if (!isGranted && !hasAskedBefore) {
                 showExplanationDialog = true
             }
@@ -54,9 +58,9 @@ fun NotificationPermissionHandler() {
                 showExplanationDialog = false
                 hasAskedBefore = true
             },
-            containerColor = DarkBackground,
+            containerColor = SurfacePrimary,
             title = {
-                Text("Allow Notifications", color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text("Allow Notifications", color = TextPrimary, fontWeight = FontWeight.SemiBold)
             },
             text = {
                 Text(
@@ -74,9 +78,13 @@ fun NotificationPermissionHandler() {
                             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanNeon)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary,
+                        contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Allow", color = DarkBackground, fontWeight = FontWeight.Bold)
+                    Text("Allow", color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -86,7 +94,7 @@ fun NotificationPermissionHandler() {
                         hasAskedBefore = true
                     }
                 ) {
-                    Text("Deny", color = TextSecondary)
+                    Text("Not now", color = TextMuted)
                 }
             },
             shape = RoundedCornerShape(16.dp)

@@ -3,48 +3,85 @@ package com.ryanshelby.spw.wallet.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Sleek Next-Gen Cyber Obsidian & Glassmorphism Colors
-val DarkBackground = Color(0xFF070B14)
-val DarkSurface = Color(0xFF0D1424)
-val DarkSurfaceElevated = Color(0xFF141D34)
-val GlassCardBackground = Color(0xCC121B30)
-val GlassCardBorder = Color(0x3300E5FF)
-val GlassCardBorderSecondary = Color(0x227C4DFF)
+// ==========================================================================
+// Financial-Grade Monochrome & Restrained Emerald Design System (Coinbase/Apple style)
+// ==========================================================================
 
-// Neon & Accent Brand Colors
-val CyanNeon = Color(0xFF00F0FF)
-val CyanGlow = Color(0xFF00E5FF)
-val PurpleNeon = Color(0xFF7C4DFF)
-val PurpleGlow = Color(0xFF9E00FF)
-val GreenEmerald = Color(0xFF00E676)
-val RedCoral = Color(0xFFFF3D71)
-val AmberGold = Color(0xFFFFB300)
-val BlueCobalt = Color(0xFF2979FF)
+// Foundation & Surfaces (Deep, credible near-black / graphite)
+val FinanceBackground = Color(0xFF0C0E12)
+val SurfacePrimary = Color(0xFF14171F)
+val SurfaceElevated = Color(0xFF1C212B)
+val SurfaceSubtle = Color(0xFF222836)
+val BorderSubtle = Color(0xFF1E2430)
+val BorderStrong = Color(0xFF333B4D)
 
-// Neutral & Text Tokens
-val TextPrimary = Color(0xFFF0F4FF)
-val TextSecondary = Color(0xFF8E9BB5)
-val TextMuted = Color(0xFF53627C)
-val DividerColor = Color(0x1F8E9BB5)
+// Typography & Content Hierarchy (Soft ivory / clean neutral slate)
+val TextPrimary = Color(0xFFF9FAFB)
+val TextSecondary = Color(0xFF9CA3AF)
+val TextMuted = Color(0xFF64748B)
+val DividerColor = Color(0xFF1E2430)
 
-// Gradients
+// Primary Action Buttons (Authoritative pure white on dark graphite, Coinbase/Apple style)
+val ButtonPrimary = Color(0xFFFFFFFF)
+val ButtonPrimaryText = Color(0xFF0C0E12)
+val ButtonSecondary = Color(0xFF1C212B)
+val ButtonSecondaryText = Color(0xFFF9FAFB)
+
+// Restrained Accent: Deep Emerald strictly for positive balance changes and live status
+val AccentPrimary = Color(0xFF10B981)
+val AccentMuted = Color(0x1F10B981) // 12% opacity tint
+val AccentHover = Color(0xFF059669)
+
+// Semantic Financial Indicators
+val SemanticPositive = Color(0xFF10B981) // Incoming transactions (+SPW), positive gains, confirmed status
+val SemanticPositiveMuted = Color(0x1F10B981)
+val SemanticError = Color(0xFFEF4444) // Negative values, failed states, destructive actions
+val SemanticErrorMuted = Color(0x1FEF4444)
+val SemanticWarning = Color(0xFFF59E0B) // Pending confirmations, warnings
+val SemanticWarningMuted = Color(0x1FF59E0B)
+val SemanticNeutral = Color(0xFF64748B) // Informational pills
+
+// Shimmer gradient colors
+val ShimmerBase = Color(0xFF14171F)
+val ShimmerHighlight = Color(0xFF222938)
+
+// ==========================================================================
+// Compatibility Aliases (Map to clean neutral slate / white rather than green)
+// ==========================================================================
+val DarkBackground = FinanceBackground
+val DarkSurface = SurfacePrimary
+val DarkSurfaceElevated = SurfaceElevated
+val GlassCardBackground = SurfacePrimary
+val GlassCardBorder = BorderSubtle
+val GlassCardBorderSecondary = BorderSubtle
+
+val CyanNeon = TextPrimary // Map legacy cyan to clean text/white, NOT green!
+val CyanGlow = TextSecondary
+val PurpleNeon = SurfaceElevated
+val PurpleGlow = SurfaceElevated
+val GreenEmerald = SemanticPositive
+val RedCoral = SemanticError
+val AmberGold = SemanticWarning
+val BlueCobalt = SemanticNeutral
+
+// Calm, subtle gradients
 val HolographicCardGradient = Brush.linearGradient(
     colors = listOf(
-        Color(0xFF1A2645),
-        Color(0xFF0D162C),
-        Color(0xFF18183B),
-        Color(0xFF0B2B3F)
+        SurfacePrimary,
+        SurfaceElevated
     )
 )
 
 val CyanPurpleGradient = Brush.linearGradient(
-    colors = listOf(CyanNeon, PurpleNeon)
+    colors = listOf(
+        SurfaceElevated,
+        SurfaceSubtle
+    )
 )
 
 val GlowBackgroundGradient = Brush.radialGradient(
     colors = listOf(
-        Color(0x3300F0FF),
-        Color(0x187C4DFF),
-        Color(0x00000000)
+        Color(0x05FFFFFF),
+        Color.Transparent
     )
 )

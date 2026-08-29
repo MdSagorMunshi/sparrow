@@ -1,12 +1,6 @@
 package com.ryanshelby.spw.wallet.ui.components
 
 import android.widget.Toast
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,7 +26,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
@@ -42,12 +35,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -63,15 +54,16 @@ import androidx.compose.ui.window.DialogProperties
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
 import com.ryanshelby.spw.wallet.data.model.TransactionStatus
 import com.ryanshelby.spw.wallet.data.model.TransactionType
-import com.ryanshelby.spw.wallet.ui.theme.CyanGlow
-import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
-import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
-import com.ryanshelby.spw.wallet.ui.theme.DarkSurfaceElevated
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBackground
-import com.ryanshelby.spw.wallet.ui.theme.GlassCardBorder
-import com.ryanshelby.spw.wallet.ui.theme.GreenEmerald
-import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
-import com.ryanshelby.spw.wallet.ui.theme.RedCoral
+import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.DividerColor
+import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
+import com.ryanshelby.spw.wallet.ui.theme.SemanticWarning
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
@@ -81,28 +73,35 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Full-featured transaction detail dialog showing all blockchain fields:
- * hash, from/to, amount, fee, merkle root, bits, block, confirmations, nonce, time, memo.
+ * Institutional Transaction Detail Modal
+ * Calm, financial-grade presentation of all on-chain metadata.
  */
 @Composable
 fun TransactionDetailDialog(
     tx: TransactionItem,
+    walletAddress: String = "",
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
-    val isIncoming = tx.type == TransactionType.RECEIVE
+    val isIncoming = when (tx.type) {
+        TransactionType.RECEIVE -> true
+        TransactionType.SEND -> false
+        TransactionType.STEALTH -> {
+            if (walletAddress.isNotBlank() && tx.fromAddress.equals(walletAddress, ignoreCase = true)) {
+                false
+            } else {
+                true
+            }
+        }
+    }
     val isStealth = tx.type == TransactionType.STEALTH
 
-    val accentColor = when {
-        isStealth -> CyanNeon
-        isIncoming -> GreenEmerald
-        else -> RedCoral
-    }
+    val accentColor = if (isIncoming) SemanticPositive else SemanticError
 
     val typeLabel = when {
-        isStealth -> "Stealth Shielded"
+        isStealth -> if (isIncoming) "Stealth Shielded (Received)" else "Stealth Shielded (Sent)"
         isIncoming -> "Received"
         else -> "Sent"
     }
@@ -114,9 +113,9 @@ fun TransactionDetailDialog(
     }
 
     val statusColor = when (tx.status) {
-        TransactionStatus.CONFIRMED -> GreenEmerald
-        TransactionStatus.PENDING -> Color(0xFFFFB300)
-        TransactionStatus.FAILED -> RedCoral
+        TransactionStatus.CONFIRMED -> SemanticPositive
+        TransactionStatus.PENDING -> SemanticWarning
+        TransactionStatus.FAILED -> SemanticError
     }
 
     val dateFormatted = remember(tx.timestamp) {
@@ -129,18 +128,6 @@ fun TransactionDetailDialog(
         }
     }
 
-    // Animated glow pulse
-    val transition = rememberInfiniteTransition(label = "detail_glow")
-    val glowAlpha by transition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowPulse"
-    )
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -149,27 +136,9 @@ fun TransactionDetailDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF0D1117),
-                            Color(0xFF0A0F19),
-                            Color(0xFF080C14)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    brush = Brush.linearGradient(
-                        listOf(
-                            accentColor.copy(alpha = glowAlpha),
-                            CyanGlow.copy(alpha = 0.2f),
-                            accentColor.copy(alpha = glowAlpha * 0.5f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(24.dp)
-                )
+                .clip(RoundedCornerShape(20.dp))
+                .background(SurfacePrimary)
+                .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp))
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
@@ -182,10 +151,9 @@ fun TransactionDetailDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(accentColor.copy(alpha = 0.15f))
-                            .border(1.dp, accentColor.copy(alpha = 0.4f), CircleShape),
+                            .background(SurfaceSubtle),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -196,7 +164,7 @@ fun TransactionDetailDialog(
                             },
                             contentDescription = null,
                             tint = accentColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -205,13 +173,13 @@ fun TransactionDetailDialog(
                             text = "Transaction Details",
                             color = TextPrimary,
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             text = typeLabel,
                             color = accentColor,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -227,28 +195,21 @@ fun TransactionDetailDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(accentColor.copy(alpha = 0.08f))
-                    .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceSubtle)
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = (if (isIncoming) "+" else "-") + amountFormatted,
+                        text = (if (isIncoming) "+" else "-") + "$amountFormatted ${tx.tokenSymbol}",
                         color = accentColor,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    Text(
-                        text = tx.tokenSymbol,
-                        color = accentColor.copy(alpha = 0.7f),
-                        fontSize = 14.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
+                        fontFamily = FontFamily.SansSerif
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(statusIcon, contentDescription = null, tint = statusColor, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -262,7 +223,7 @@ fun TransactionDetailDialog(
                             Text(
                                 text = "  •  ${tx.confirmations} confirmation${if (tx.confirmations != 1) "s" else ""}",
                                 color = TextMuted,
-                                fontSize = 10.sp
+                                fontSize = 11.sp
                             )
                         }
                     }
@@ -275,7 +236,7 @@ fun TransactionDetailDialog(
             SectionLabel("TRANSACTION HASH")
             CopyableMonoField(
                 value = tx.txHash,
-                accentColor = CyanNeon,
+                textColor = TextPrimary,
                 onCopy = {
                     clipboardManager.setText(AnnotatedString(tx.txHash))
                     Toast.makeText(context, "TXID copied", Toast.LENGTH_SHORT).show()
@@ -283,14 +244,14 @@ fun TransactionDetailDialog(
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-            CyberDivider()
+            FinancialDivider()
             Spacer(modifier = Modifier.height(14.dp))
 
             // ── Addresses ───────────────────────────────────────
             SectionLabel("FROM")
             CopyableMonoField(
                 value = tx.fromAddress,
-                accentColor = RedCoral.copy(alpha = 0.8f),
+                textColor = TextSecondary,
                 onCopy = {
                     clipboardManager.setText(AnnotatedString(tx.fromAddress))
                     Toast.makeText(context, "From address copied", Toast.LENGTH_SHORT).show()
@@ -302,7 +263,7 @@ fun TransactionDetailDialog(
             SectionLabel("TO")
             CopyableMonoField(
                 value = tx.toAddress,
-                accentColor = GreenEmerald.copy(alpha = 0.8f),
+                textColor = TextSecondary,
                 onCopy = {
                     clipboardManager.setText(AnnotatedString(tx.toAddress))
                     Toast.makeText(context, "To address copied", Toast.LENGTH_SHORT).show()
@@ -310,12 +271,12 @@ fun TransactionDetailDialog(
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-            CyberDivider()
+            FinancialDivider()
             Spacer(modifier = Modifier.height(14.dp))
 
             // ── Blockchain Details Grid ─────────────────────────
-            SectionLabel("BLOCKCHAIN DATA")
-            Spacer(modifier = Modifier.height(8.dp))
+            SectionLabel("LEDGER METRICS")
+            Spacer(modifier = Modifier.height(6.dp))
 
             DetailGridRow("Amount", "$amountFormatted ${tx.tokenSymbol}")
             DetailGridRow("Feathers", NumberFormat.getNumberInstance(Locale.US).format(tx.amountFeathers) + " feathers")
@@ -338,58 +299,18 @@ fun TransactionDetailDialog(
                 DetailGridRow("Memo", tx.memo)
             }
 
-            // ── Merkle Root ─────────────────────────────────────
             if (tx.merkleRoot.isNotBlank()) {
                 Spacer(modifier = Modifier.height(14.dp))
-                CyberDivider()
+                FinancialDivider()
                 Spacer(modifier = Modifier.height(14.dp))
 
                 SectionLabel("MERKLE ROOT")
                 CopyableMonoField(
                     value = tx.merkleRoot,
-                    accentColor = PurpleNeon.copy(alpha = 0.8f),
+                    textColor = TextSecondary,
                     onCopy = {
                         clipboardManager.setText(AnnotatedString(tx.merkleRoot))
                         Toast.makeText(context, "Merkle root copied", Toast.LENGTH_SHORT).show()
-                    }
-                )
-            }
-
-            // ── Bits ────────────────────────────────────────────
-            if (tx.bits.isNotBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                SectionLabel("BITS (DIFFICULTY TARGET)")
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(DarkSurfaceElevated)
-                        .border(1.dp, GlassCardBorder, RoundedCornerShape(10.dp))
-                        .padding(10.dp)
-                ) {
-                    Text(
-                        text = tx.bits,
-                        color = Color(0xFFFFB300),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            // ── TX Public Key ───────────────────────────────────
-            if (!tx.txPubkey.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(14.dp))
-                CyberDivider()
-                Spacer(modifier = Modifier.height(14.dp))
-
-                SectionLabel("TX PUBLIC KEY")
-                CopyableMonoField(
-                    value = tx.txPubkey,
-                    accentColor = CyanGlow,
-                    onCopy = {
-                        clipboardManager.setText(AnnotatedString(tx.txPubkey))
-                        Toast.makeText(context, "TX pubkey copied", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -404,16 +325,16 @@ fun TransactionDetailDialog(
                 Button(
                     onClick = {
                         clipboardManager.setText(AnnotatedString(tx.txHash))
-                        Toast.makeText(context, "TXID copied!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "TXID copied", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkSurfaceElevated,
+                        containerColor = SurfaceElevated,
                         contentColor = TextPrimary
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Copy TXID", fontSize = 12.sp)
                 }
@@ -421,13 +342,13 @@ fun TransactionDetailDialog(
                 Button(
                     onClick = onDismiss,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = accentColor,
-                        contentColor = DarkBackground
+                        containerColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary,
+                        contentColor = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Close", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = DarkBackground)
+                    Text("Close", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText)
                 }
             }
         }
@@ -442,8 +363,8 @@ private fun SectionLabel(text: String) {
         text = text,
         color = TextMuted,
         fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 1.5.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.2.sp,
         modifier = Modifier.padding(bottom = 6.dp)
     )
 }
@@ -451,15 +372,15 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun CopyableMonoField(
     value: String,
-    accentColor: Color,
+    textColor: Color,
     onCopy: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(DarkSurfaceElevated)
-            .border(1.dp, GlassCardBorder, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .background(SurfaceSubtle)
+            .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
             .clickable { onCopy() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -467,8 +388,8 @@ private fun CopyableMonoField(
     ) {
         Text(
             text = value,
-            color = accentColor,
-            fontSize = 10.sp,
+            color = textColor,
+            fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             modifier = Modifier
                 .weight(1f)
@@ -481,7 +402,7 @@ private fun CopyableMonoField(
             Icons.Default.ContentCopy,
             contentDescription = "Copy",
             tint = TextMuted,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(13.dp)
         )
     }
 }
@@ -504,7 +425,7 @@ private fun DetailGridRow(label: String, value: String) {
             text = value,
             color = TextPrimary,
             fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Medium,
             fontFamily = FontFamily.Monospace,
             textAlign = TextAlign.End,
             modifier = Modifier.weight(0.6f)
@@ -513,9 +434,9 @@ private fun DetailGridRow(label: String, value: String) {
 }
 
 @Composable
-private fun CyberDivider() {
+private fun FinancialDivider() {
     HorizontalDivider(
         thickness = 1.dp,
-        color = GlassCardBorder
+        color = DividerColor
     )
 }

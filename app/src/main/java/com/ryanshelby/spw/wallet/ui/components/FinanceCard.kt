@@ -14,37 +14,34 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
+import com.ryanshelby.spw.wallet.ui.theme.bouncyClickable
 
 /**
- * Modernized Financial Container
- * Formerly GlassCard; now rendered as a clean, institutional matte charcoal container.
+ * Institutional Financial Card Container
+ * Built on architectural charcoal surfaces with a crisp hairline border.
  */
 @Composable
-fun GlassCard(
+fun FinanceCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(16.dp),
     backgroundColor: Color = SurfacePrimary,
     borderColor: Color = BorderSubtle,
     borderWidth: Dp = 1.dp,
-    glowing: Boolean = false,
+    onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val clickableModifier = if (onClick != null) {
+        Modifier.bouncyClickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = modifier
             .clip(shape)
             .background(backgroundColor, shape)
-            .border(borderWidth, borderColor, shape),
-        content = content
-    )
-}
-
-@Composable
-fun ShimmerBackground(
-    modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit
-) {
-    Box(
-        modifier = modifier.shimmerPlaceholder(RoundedCornerShape(0.dp)),
+            .border(borderWidth, borderColor, shape)
+            .then(clickableModifier),
         content = content
     )
 }
