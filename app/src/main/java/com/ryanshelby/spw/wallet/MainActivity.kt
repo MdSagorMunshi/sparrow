@@ -585,6 +585,7 @@ class MainActivity : FragmentActivity() {
                                         AppThemeState.setTheme(theme)
                                     },
                                     onNavigateToAbout = { navController.navigate("about") },
+                                    onNavigateToNfcSettings = { navController.navigate("nfc_settings") },
                                     onBack = { navController.popBackStack() },
                                     onSetBiometricEnabled = { enabled ->
                                         isBiometricEnabled = enabled
