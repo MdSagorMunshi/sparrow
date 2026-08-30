@@ -177,10 +177,31 @@ fun ReceiveScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Clean high-contrast QR code
-                GlowingQrCodeView(
-                    data = qrPayload,
-                    sizeDp = 210.dp
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GlowingQrCodeView(
+                        data = qrPayload,
+                        sizeDp = 210.dp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    com.ryanshelby.spw.wallet.ui.components.NfcRippleAnimation()
+                    Spacer(modifier = Modifier.width(24.dp))
+                    Column {
+                        Text("NFC Tap-to-Receive Ready", color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text("Tap sender's phone or tag", color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(18.dp))
 

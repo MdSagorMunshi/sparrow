@@ -166,6 +166,24 @@ class MainActivity : FragmentActivity() {
                 var autoLockTimeoutMinutes by remember { mutableIntStateOf(securityManager.getAutoLockTimeoutMinutes()) }
                 var currentTheme by remember { mutableStateOf(securityManager.getAppTheme()) }
 
+                val nfcManager = remember { com.ryanshelby.spw.wallet.nfc.NfcManager(this@MainActivity) }
+                var pendingNfcInvoice by remember { mutableStateOf<com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice?>(null) }
+                var sendToggleEnabled by remember { mutableStateOf(securityManager.isNfcSendToggleEnabled()) }
+
+                LaunchedEffect(Unit) {
+                    nfcManager.onInvoiceReceived = { invoice ->
+                        pendingNfcInvoice = invoice
+                        HapticUtil.performSuccess(context)
+                    }
+                    nfcManager.onTagWriteSuccess = {
+                        Toast.makeText(context, "NFC Tag Written Successfully", Toast.LENGTH_SHORT).show()
+                        HapticUtil.performSuccess(context)
+                    }
+                    nfcManager.onTagWriteError = { err ->
+                        Toast.makeText(context, "NFC Tag Write Failed: $err", Toast.LENGTH_LONG).show()
+                    }
+                }
+
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
@@ -200,6 +218,26 @@ class MainActivity : FragmentActivity() {
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
+
+                // NFC Reader Lifecycle
+                DisposableEffect(lifecycleOwner, currentRoute, sendToggleEnabled) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            if (currentRoute == "receive" || (currentRoute?.startsWith("send") == true && sendToggleEnabled)) {
+                                nfcManager.enableReaderMode()
+                            } else {
+                                nfcManager.disableReaderMode()
+                            }
+                        } else if (event == Lifecycle.Event.ON_PAUSE) {
+                            nfcManager.disableReaderMode()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        nfcManager.disableReaderMode()
                         lifecycleOwner.lifecycle.removeObserver(observer)
                     }
                 }
@@ -602,6 +640,14 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
 
+                            // NFC Settings Screen
+                            composable("nfc_settings") {
+                                com.ryanshelby.spw.wallet.ui.screens.NfcSettingsScreen(
+                                    securityManager = securityManager,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+
                             // 8. About Screen
                             composable("about") {
                                 AboutScreen(
@@ -609,6 +655,34 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                         }
+                    }
+                    
+                    // Render NFC Payment Popup over everything
+                    pendingNfcInvoice?.let { invoice ->
+                        com.ryanshelby.spw.wallet.ui.components.NfcPaymentPopup(
+                            invoice = invoice,
+                            onDismiss = { pendingNfcInvoice = null },
+                            onConfirmPayment = { amount ->
+                                pendingNfcInvoice = null
+                                // If require auth is true, trigger biometrics
+                                if (securityManager.isNfcRequireAuth() && securityManager.canAuthenticateWithBiometrics()) {
+                                    securityManager.authenticateWithBiometrics(
+                                        activity = this@MainActivity,
+                                        title = "Authorize NFC Payment",
+                                        subtitle = "Biometric confirmation required to pay ${invoice.name}",
+                                        onSuccess = {
+                                            navController.navigate("send?token=${invoice.token ?: "SPW"}&recipient=${invoice.address}&amount=$amount")
+                                        },
+                                        onError = { err ->
+                                            Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                } else {
+                                    // Otherwise navigate directly to send screen
+                                    navController.navigate("send?token=${invoice.token ?: "SPW"}&recipient=${invoice.address}&amount=$amount")
+                                }
+                            }
+                        )
                     }
                 }
             }

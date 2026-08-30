@@ -59,6 +59,11 @@ class SecurityManager(private val context: Context) {
         private const val KEY_LAST_BACKGROUND_TIMESTAMP = "key_last_background_timestamp"
         private const val KEY_APP_THEME = "key_app_theme"
 
+        private const val KEY_USER_NICKNAME = "key_user_nickname"
+        private const val KEY_NFC_ALWAYS_ACTIVE = "key_nfc_always_active"
+        private const val KEY_NFC_REQUIRE_AUTH = "key_nfc_require_auth"
+        private const val KEY_NFC_SEND_TOGGLE = "key_nfc_send_toggle"
+
         private const val PIN_PEPPER_KEY_ALIAS = "spw_pin_pepper_v2"
         private const val PBKDF2_ITERATIONS = 100_000
         private const val HASH_KEY_LENGTH_BITS = 256
@@ -90,6 +95,7 @@ class SecurityManager(private val context: Context) {
             .remove(KEY_SPEND_PUB_HEX)
             .remove(KEY_VIEW_PUB_HEX)
             .remove(KEY_WALLET_NAME)
+            .remove(KEY_USER_NICKNAME)
             .remove(KEY_LAST_BACKGROUND_TIMESTAMP)
         prefs.all.keys.filter { it.startsWith("cached_bal_") }.forEach {
             editor.remove(it)
@@ -520,16 +526,52 @@ class SecurityManager(private val context: Context) {
     // ── Theme Mode Settings ─────────────────────────────────────────────────
 
     fun getAppTheme(): ThemeMode {
-        val savedName = prefs.getString(KEY_APP_THEME, ThemeMode.DARK.name) ?: ThemeMode.DARK.name
-        return try {
-            ThemeMode.valueOf(savedName)
-        } catch (e: Exception) {
-            ThemeMode.DARK
-        }
+        return prefs.getString(KEY_APP_THEME, ThemeMode.DARK.name)?.let {
+            try { ThemeMode.valueOf(it) } catch (e: Exception) { ThemeMode.DARK }
+        } ?: ThemeMode.DARK
     }
 
     fun setAppTheme(theme: ThemeMode) {
         prefs.edit().putString(KEY_APP_THEME, theme.name).apply()
+    }
+
+    fun getUserNickname(): String {
+        var name = prefs.getString(KEY_USER_NICKNAME, null)
+        if (name.isNullOrBlank()) {
+            name = com.ryanshelby.spw.wallet.utils.ProfileNameGenerator.generateRandomName()
+            setUserNickname(name)
+        }
+        return name
+    }
+
+    fun setUserNickname(name: String) {
+        if (com.ryanshelby.spw.wallet.utils.ProfileNameGenerator.isValidName(name)) {
+            prefs.edit().putString(KEY_USER_NICKNAME, name).apply()
+        }
+    }
+
+    fun isNfcAlwaysActive(): Boolean {
+        return prefs.getBoolean(KEY_NFC_ALWAYS_ACTIVE, false)
+    }
+
+    fun setNfcAlwaysActive(active: Boolean) {
+        prefs.edit().putBoolean(KEY_NFC_ALWAYS_ACTIVE, active).apply()
+    }
+
+    fun isNfcRequireAuth(): Boolean {
+        return prefs.getBoolean(KEY_NFC_REQUIRE_AUTH, false)
+    }
+
+    fun setNfcRequireAuth(require: Boolean) {
+        prefs.edit().putBoolean(KEY_NFC_REQUIRE_AUTH, require).apply()
+    }
+
+    fun isNfcSendToggleEnabled(): Boolean {
+        return prefs.getBoolean(KEY_NFC_SEND_TOGGLE, false)
+    }
+
+    fun setNfcSendToggleEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_NFC_SEND_TOGGLE, enabled).apply()
     }
 
     // ── Hardware KeyStore Pepper & Cryptographic Derivation ────────────────

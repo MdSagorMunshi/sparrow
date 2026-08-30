@@ -152,6 +152,7 @@ fun SettingsSecurityScreen(
         AppThemeState.setTheme(it)
     },
     onNavigateToAbout: () -> Unit = {},
+    onNavigateToNfcSettings: () -> Unit = {},
     onBack: () -> Unit,
     onSetBiometricEnabled: (Boolean) -> Unit,
     onSetScramblePin: (Boolean) -> Unit,
@@ -177,6 +178,10 @@ fun SettingsSecurityScreen(
     val oledDetection = remember { OledDisplayDetector.detectDisplay(context) }
     var showThemeModal by remember { mutableStateOf(false) }
     var showOledUnsupportedDialog by remember { mutableStateOf(false) }
+
+    var showNicknameDialog by remember { mutableStateOf(false) }
+    var currentNickname by remember { mutableStateOf(securityManager.getUserNickname()) }
+    var nicknameInput by remember { mutableStateOf(currentNickname) }
 
     var showSeedModal by remember { mutableStateOf(false) }
     var showKeysModal by remember { mutableStateOf(false) }
@@ -655,6 +660,67 @@ fun SettingsSecurityScreen(
                         }
                     }
                     Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SECTION: PROFILE & NFC PAYMENTS
+            SectionHeader(title = "PROFILE & NFC PAYMENTS")
+            
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Nickname Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                HapticUtil.performKeyClick(context)
+                                nicknameInput = currentNickname
+                                showNicknameDialog = true
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Contacts, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Public Nickname", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(currentNickname, color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Text("Edit", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = BorderSubtle, thickness = 1.dp)
+
+                    // NFC Settings Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                HapticUtil.performKeyClick(context)
+                                onNavigateToNfcSettings()
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Speed, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("NFC Tap-to-Pay Settings", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("Configure offline payments and HCE", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
 
@@ -1376,6 +1442,75 @@ fun SettingsSecurityScreen(
                             Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Clear Wallet (Diagnostic Reset)", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // Nickname Edit Dialog
+        // ─────────────────────────────────────────────────────────────────
+        if (showNicknameDialog) {
+            Dialog(onDismissRequest = { showNicknameDialog = false }) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Default.Contacts, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Edit Nickname",
+                            color = TextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Max 15 alphabetic characters.",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        OutlinedTextField(
+                            value = nicknameInput,
+                            onValueChange = { 
+                                if (it.length <= 15 && it.all { char -> char.isLetter() }) {
+                                    nicknameInput = it
+                                }
+                            },
+                            label = { Text("Nickname", color = TextSecondary) },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = CyanNeon,
+                                unfocusedBorderColor = BorderSubtle,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            TextButton(onClick = { showNicknameDialog = false }) {
+                                Text("Cancel", color = TextSecondary)
+                            }
+                            Button(
+                                onClick = {
+                                    if (nicknameInput.isNotBlank()) {
+                                        securityManager.setUserNickname(nicknameInput)
+                                        currentNickname = nicknameInput
+                                    }
+                                    showNicknameDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CyanNeon, contentColor = DarkBackground)
+                            ) {
+                                Text("Save", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
