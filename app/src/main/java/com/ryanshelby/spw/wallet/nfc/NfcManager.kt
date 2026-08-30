@@ -39,6 +39,14 @@ class NfcManager(private val activity: Activity) : NfcAdapter.ReaderCallback {
     
     var writeModeAddress: String? = null
 
+    fun isNfcSupported(): Boolean {
+        return nfcAdapter != null
+    }
+
+    fun isNfcEnabled(): Boolean {
+        return nfcAdapter?.isEnabled == true
+    }
+
     fun enableReaderMode() {
         val flags = NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
         nfcAdapter?.enableReaderMode(activity, this, flags, null)

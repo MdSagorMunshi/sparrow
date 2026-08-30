@@ -142,6 +142,8 @@ fun SettingsSecurityScreen(
     isBiometricAvailable: Boolean,
     isBiometricEnabled: Boolean,
     isScramblePin: Boolean,
+    isNfcSupported: Boolean = false,
+    isNfcEnabled: Boolean = false,
     isPrivacyShieldEnabled: Boolean = securityManager.isPrivacyShieldEnabled(),
     onTogglePrivacyShield: (Boolean) -> Unit = { securityManager.setPrivacyShieldEnabled(it) },
     autoLockTimeoutMinutes: Int = securityManager.getAutoLockTimeoutMinutes(),

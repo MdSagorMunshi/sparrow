@@ -1,5 +1,7 @@
 package com.ryanshelby.spw.wallet.ui.screens
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,14 +44,19 @@ import com.ryanshelby.spw.wallet.ui.components.GlassCard
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
+import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
 import com.ryanshelby.spw.wallet.ui.theme.SurfaceSubtle
 import com.ryanshelby.spw.wallet.ui.theme.TextMuted
 import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 import com.ryanshelby.spw.wallet.ui.theme.TextSecondary
+import com.ryanshelby.spw.wallet.ui.theme.SemanticError
+import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
 
 @Composable
 fun NfcSettingsScreen(
     securityManager: SecurityManager,
+    isNfcSupported: Boolean = false,
+    isNfcEnabled: Boolean = false,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -73,6 +83,46 @@ fun NfcSettingsScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
         
+        if (!isNfcSupported) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = SemanticError, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("No NFC Support", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Your device does not have NFC hardware, or it is unavailable.", color = TextSecondary, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                }
+            }
+            return@Column
+        }
+
+        if (!isNfcEnabled) {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.Speed, contentDescription = null, tint = TextMuted, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("NFC is Disabled", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Please enable NFC in your system settings to use Tap-to-Pay and other NFC features.", color = TextSecondary, fontSize = 14.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) },
+                        colors = ButtonDefaults.buttonColors(containerColor = ButtonPrimary, contentColor = DarkBackground),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Text("Open Settings", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            return@Column
+        }
+
         Text("TAP-TO-PAY", color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {

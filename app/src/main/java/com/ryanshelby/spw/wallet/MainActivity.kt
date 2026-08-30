@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -162,6 +163,23 @@ class MainActivity : FragmentActivity() {
                 val activeLanguage by repository.activeLanguage.collectAsStateWithLifecycle()
                 val isInitialSyncing by repository.isInitialSyncing.collectAsStateWithLifecycle()
 
+                val lifecycleOwner = LocalLifecycleOwner.current
+                val nfcManager = remember { com.ryanshelby.spw.wallet.nfc.NfcManager(this@MainActivity) }
+                val isNfcSupported by remember { mutableStateOf(nfcManager.isNfcSupported()) }
+                var isNfcEnabled by remember { mutableStateOf(nfcManager.isNfcEnabled()) }
+
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            isNfcEnabled = nfcManager.isNfcEnabled()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
+                    }
+                }
+
                 var hideBalance by remember { mutableStateOf(securityManager.isHideBalance()) }
                 var isBiometricEnabled by remember { mutableStateOf(securityManager.isBiometricEnabled()) }
                 var isScramblePin by remember { mutableStateOf(securityManager.isScramblePin()) }
@@ -170,7 +188,6 @@ class MainActivity : FragmentActivity() {
                 var autoLockTimeoutMinutes by remember { mutableIntStateOf(securityManager.getAutoLockTimeoutMinutes()) }
                 var currentTheme by remember { mutableStateOf(securityManager.getAppTheme()) }
 
-                val nfcManager = remember { com.ryanshelby.spw.wallet.nfc.NfcManager(this@MainActivity) }
                 var pendingNfcInvoice by remember { mutableStateOf<com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice?>(null) }
                 var sendToggleEnabled by remember { mutableStateOf(securityManager.isNfcSendToggleEnabled()) }
 
@@ -188,7 +205,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
 
-                val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
@@ -196,9 +212,6 @@ class MainActivity : FragmentActivity() {
                                 if (securityManager.hasWallet() && securityManager.isPinSet() && securityManager.shouldAutoLock()) {
                                     isWalletUnlocked = false
                                     val currentDest = navController.currentDestination
-                                    // If currentDestination is null, NavHost has not attached/initialized its graph yet.
-                                    // On cold start with a PIN set, startDestination is already "pin_lock" and isWalletUnlocked is false.
-                                    // We only navigate on warm resume when coming back from another screen.
                                     if (currentDest != null && currentDest.route != "pin_lock") {
                                         val rootGraphId = try { navController.graph.id } catch (_: Exception) { null }
                                         if (rootGraphId != null) {
@@ -472,6 +485,7 @@ class MainActivity : FragmentActivity() {
                                     navArgument("amount") {
                                         type = NavType.StringType
                                         nullable = true
+                                        defaultValue = null
                                     }
                                 )
                             ) { backStackEntry ->
@@ -482,6 +496,8 @@ class MainActivity : FragmentActivity() {
                                     initialTokenSymbol = initialToken,
                                     initialRecipientAddress = initialRecipient,
                                     initialAmount = initialAmount,
+                                    isNfcSupported = isNfcSupported,
+                                    isNfcEnabled = isNfcEnabled,
                                     tokens = tokens,
                                     contacts = contacts,
                                     network = activeNetwork,
@@ -531,6 +547,8 @@ class MainActivity : FragmentActivity() {
                                     viewPubHex = securityManager.getViewPubHex(),
                                     network = activeNetwork,
                                     activeLanguage = activeLanguage,
+                                    isNfcSupported = isNfcSupported,
+                                    isNfcEnabled = isNfcEnabled,
                                     onBack = { navController.popBackStack() },
                                     onWriteNfcTag = {
                                         nfcManager.writeModeAddress = securityManager.getWalletAddress()
@@ -582,6 +600,7 @@ class MainActivity : FragmentActivity() {
                                     viewKeyHex = securityManager.getViewKeyHex(),
                                     currentAddress = securityManager.getWalletAddress(),
                                     accounts = accounts,
+                                    isNfcSupported = isNfcSupported,
                                     isBiometricAvailable = securityManager.canAuthenticateWithBiometrics(),
                                     isBiometricEnabled = isBiometricEnabled,
                                     isScramblePin = isScramblePin,
@@ -670,6 +689,8 @@ class MainActivity : FragmentActivity() {
                             composable("nfc_settings") {
                                 com.ryanshelby.spw.wallet.ui.screens.NfcSettingsScreen(
                                     securityManager = securityManager,
+                                    isNfcSupported = isNfcSupported,
+                                    isNfcEnabled = isNfcEnabled,
                                     onBack = { navController.popBackStack() }
                                 )
                             }

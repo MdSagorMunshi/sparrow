@@ -83,6 +83,7 @@ import com.ryanshelby.spw.wallet.ui.theme.BorderStrong
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
 import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
+import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
 import com.ryanshelby.spw.wallet.ui.theme.SemanticError
 import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
@@ -111,6 +112,8 @@ fun SendTransferScreen(
     onConfirmSend: suspend (tokenSymbol: String, toAddress: String, amount: Double, gasFee: Double, memo: String, isStealth: Boolean, recipientViewPubHex: String?) -> Result<String>,
     onVerifyPin: (String) -> Boolean,
     onTriggerBiometric: (onSuccess: () -> Unit) -> Unit,
+    isNfcSupported: Boolean = false,
+    isNfcEnabled: Boolean = false,
     onNfcTapToPayClick: () -> Unit = {},
     onScannedPaymentInvoice: (com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice) -> Unit = {}
 ) {
@@ -280,27 +283,48 @@ fun SendTransferScreen(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SurfacePrimary)
-                            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                            .bouncyClickable {
-                                HapticUtil.lightTap(context)
-                                onNfcTapToPayClick()
-                                Toast.makeText(context, "NFC Reader Enabled. Tap to pay.", Toast.LENGTH_SHORT).show()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Speed,
-                            contentDescription = "Tap to Pay",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(20.dp)
+                    if (!isNfcSupported) {
+                        Text(
+                            text = "Your phone doesn't have NFC",
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(end = 12.dp)
                         )
+                    } else if (!isNfcEnabled) {
+                        Text(
+                            text = "Turn on NFC",
+                            color = CyanNeon,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .clickable {
+                                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_NFC_SETTINGS))
+                                }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SurfacePrimary)
+                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                .bouncyClickable {
+                                    HapticUtil.lightTap(context)
+                                    onNfcTapToPayClick()
+                                    Toast.makeText(context, "NFC Reader Enabled. Tap to pay.", Toast.LENGTH_SHORT).show()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Speed,
+                                contentDescription = "Tap to Pay",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
                     Box(
                         modifier = Modifier
                             .size(40.dp)

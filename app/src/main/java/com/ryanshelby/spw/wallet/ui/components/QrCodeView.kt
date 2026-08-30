@@ -108,7 +108,7 @@ fun GlowingQrCodeView(
                             if (matrix[r][c]) {
                                 val topLeft = Offset(c * cellSize + 0.5f, r * cellSize + 0.5f)
                                 drawRoundRect(
-                                    color = Color(0xFFF9FAFB),
+                                    color = TextPrimary,
                                     topLeft = topLeft,
                                     size = Size(cellSize - 0.8f, cellSize - 0.8f),
                                     cornerRadius = CornerRadius(2.5f, 2.5f)
