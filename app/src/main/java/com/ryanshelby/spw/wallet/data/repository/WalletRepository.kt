@@ -464,14 +464,17 @@ class WalletRepository(
                             nonce = tx.txid.take(8).toLongOrNull(16) ?: 0L
                         )
                     }
+                    val newTxs = dbTxs.filter { !existingTxHashes.contains(it.txHash) }
                     if (securityManager.getWalletAddress() == address) {
-                        walletDao.insertTransactions(dbTxs)
+                        if (newTxs.isNotEmpty()) {
+                            walletDao.insertTransactions(newTxs)
+                        }
 
                         val activeAccount = walletDao.getAccountByAddress(address)
                         val cutoffTime = (activeAccount?.createdAt ?: System.currentTimeMillis()) - 60000L // 1 minute buffer for edge cases
 
-                        dbTxs.forEach { tx ->
-                            if (!existingTxHashes.contains(tx.txHash) && tx.toAddress == address && tx.fromAddress != address) {
+                        newTxs.forEach { tx ->
+                            if (tx.toAddress == address && tx.fromAddress != address) {
                                 if (tx.timestamp >= cutoffTime) {
                                     notificationService.showIncomingTransferNotification(
                                         amount = tx.amountSpw,

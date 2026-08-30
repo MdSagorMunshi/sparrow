@@ -170,13 +170,32 @@ class MainActivity : FragmentActivity() {
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
-                            if (securityManager.hasWallet() && securityManager.isPinSet() && securityManager.shouldAutoLock()) {
-                                isWalletUnlocked = false
-                                navController.navigate("pin_lock") {
-                                    popUpTo(0) { inclusive = true }
+                            try {
+                                if (securityManager.hasWallet() && securityManager.isPinSet() && securityManager.shouldAutoLock()) {
+                                    isWalletUnlocked = false
+                                    val currentDest = navController.currentDestination
+                                    // If currentDestination is null, NavHost has not attached/initialized its graph yet.
+                                    // On cold start with a PIN set, startDestination is already "pin_lock" and isWalletUnlocked is false.
+                                    // We only navigate on warm resume when coming back from another screen.
+                                    if (currentDest != null && currentDest.route != "pin_lock") {
+                                        val rootGraphId = try { navController.graph.id } catch (_: Exception) { null }
+                                        if (rootGraphId != null) {
+                                            navController.navigate("pin_lock") {
+                                                popUpTo(rootGraphId) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        } else {
+                                            navController.navigate("pin_lock") {
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    }
                                 }
+                            } catch (e: Exception) {
+                                android.util.Log.e("MainActivity", "Auto-lock navigation error", e)
+                            } finally {
+                                securityManager.resetBackgroundTimer()
                             }
-                            securityManager.resetBackgroundTimer()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -292,8 +311,12 @@ class MainActivity : FragmentActivity() {
                                                     repository.resetWalletData()
                                                     Toast.makeText(context, "Wallet wiped (Decoy PIN)", Toast.LENGTH_LONG).show()
                                                     isWalletUnlocked = false
+                                                    val rootGraphId = try { navController.graph.id } catch (_: Exception) { null }
                                                     navController.navigate("onboarding") {
-                                                        popUpTo(0) { inclusive = true }
+                                                        if (rootGraphId != null) {
+                                                            popUpTo(rootGraphId) { inclusive = true }
+                                                        }
+                                                        launchSingleTop = true
                                                     }
                                                 }
                                                 return@PinLockScreen false
@@ -564,8 +587,12 @@ class MainActivity : FragmentActivity() {
                                     onResetWallet = {
                                         repository.resetWalletData()
                                         isWalletUnlocked = false
+                                        val rootGraphId = try { navController.graph.id } catch (_: Exception) { null }
                                         navController.navigate("onboarding") {
-                                            popUpTo(0) { inclusive = true }
+                                            if (rootGraphId != null) {
+                                                popUpTo(rootGraphId) { inclusive = true }
+                                            }
+                                            launchSingleTop = true
                                         }
                                     },
                                     onScanStealthOutputs = {

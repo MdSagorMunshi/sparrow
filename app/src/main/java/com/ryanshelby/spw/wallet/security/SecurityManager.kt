@@ -60,6 +60,7 @@ class SecurityManager(private val context: Context) {
             .remove(KEY_SPEND_PUB_HEX)
             .remove(KEY_VIEW_PUB_HEX)
             .remove(KEY_WALLET_NAME)
+            .remove(KEY_LAST_BACKGROUND_TIMESTAMP)
         prefs.all.keys.filter { it.startsWith("cached_bal_") }.forEach {
             editor.remove(it)
         }
