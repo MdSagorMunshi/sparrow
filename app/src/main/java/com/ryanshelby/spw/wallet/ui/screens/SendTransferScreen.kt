@@ -111,7 +111,8 @@ fun SendTransferScreen(
     onConfirmSend: suspend (tokenSymbol: String, toAddress: String, amount: Double, gasFee: Double, memo: String, isStealth: Boolean, recipientViewPubHex: String?) -> Result<String>,
     onVerifyPin: (String) -> Boolean,
     onTriggerBiometric: (onSuccess: () -> Unit) -> Unit,
-    onNfcTapToPayClick: () -> Unit = {}
+    onNfcTapToPayClick: () -> Unit = {},
+    onScannedPaymentInvoice: (com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice) -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -133,6 +134,17 @@ fun SendTransferScreen(
             onDismiss = { showQrScanner = false },
             onCodeScanned = { rawCode ->
                 showQrScanner = false
+                
+                try {
+                    val invoice = com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice.fromJson(rawCode)
+                    if (invoice.address.isNotBlank()) {
+                        onScannedPaymentInvoice(invoice)
+                        return@QrScannerDialog
+                    }
+                } catch (e: Exception) {
+                    // Not an invoice, try standard URI parsing
+                }
+                
                 val parsed = QrUriParser.parse(rawCode)
                 if (parsed.address.isNotBlank()) {
                     recipientAddress = parsed.address
@@ -1008,6 +1020,7 @@ fun SendTransferScreen(
                 overlayError = null
             }
         )
+    }
     }
 }
 

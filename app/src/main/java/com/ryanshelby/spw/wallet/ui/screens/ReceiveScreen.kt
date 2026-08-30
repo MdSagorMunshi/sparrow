@@ -59,6 +59,7 @@ import com.ryanshelby.spw.wallet.ui.components.GlowingQrCodeView
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
 import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
 import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
 import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
@@ -81,7 +82,8 @@ fun ReceiveScreen(
     network: NetworkConfig,
     activeLanguage: AppLanguage,
     onBack: () -> Unit,
-    onWriteNfcTag: () -> Unit = {}
+    onWriteNfcTag: () -> Unit = {},
+    onNavigateToRequestPayment: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -202,14 +204,24 @@ fun ReceiveScreen(
                         Text("NFC Tap-to-Receive Ready", color = TextPrimary, fontWeight = FontWeight.Bold)
                         Text("Tap sender's phone or tag", color = TextSecondary, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = { onWriteNfcTag() },
-                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceSubtle, contentColor = TextPrimary),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Write Address to NFC Tag", fontSize = 12.sp)
+                        Row {
+                            Button(
+                                onClick = { onNavigateToRequestPayment() },
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary, contentColor = DarkBackground),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("Request Payment", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { onWriteNfcTag() },
+                                colors = ButtonDefaults.buttonColors(containerColor = SurfaceSubtle, contentColor = TextPrimary),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Write Tag", fontSize = 12.sp)
+                            }
                         }
                     }
                 }

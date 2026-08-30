@@ -141,9 +141,13 @@ class MainActivity : FragmentActivity() {
                 val app = SPWApplication.instance
                 val repository = app.walletRepository
                 val securityManager = app.securityManager
-                val context = LocalContext.current
                 val scope = rememberCoroutineScope()
                 val clipboardManager = LocalClipboardManager.current
+                val context = LocalContext.current
+                
+                val transactionWatcher = remember {
+                    com.ryanshelby.spw.wallet.payment.TransactionWatcher(repository.apiClient)
+                }
 
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -511,6 +515,9 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onNfcTapToPayClick = {
                                         nfcManager.enableReaderMode()
+                                    },
+                                    onScannedPaymentInvoice = { invoice ->
+                                        pendingNfcInvoice = invoice
                                     }
                                 )
                             }
@@ -529,7 +536,18 @@ class MainActivity : FragmentActivity() {
                                         nfcManager.writeModeAddress = securityManager.getWalletAddress()
                                         nfcManager.enableReaderMode()
                                         Toast.makeText(context, "Ready to write NFC tag. Tap a tag.", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onNavigateToRequestPayment = {
+                                        navController.navigate("request_payment")
                                     }
+                                )
+                            }
+                            
+                            composable("request_payment") {
+                                com.ryanshelby.spw.wallet.ui.screens.RequestPaymentScreen(
+                                    securityManager = securityManager,
+                                    transactionWatcher = transactionWatcher,
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
 

@@ -106,7 +106,7 @@ data class SpwBlockResponse(
     @Json(name = "transactions") val transactions: List<SpwTransaction> = emptyList()
 )
 
-class SPWApiClient(
+open class SPWApiClient(
     private var baseUrl: String = SPWCrypto.DEFAULT_NODE_URL
 ) {
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -162,7 +162,7 @@ class SPWApiClient(
         }
     }
 
-    suspend fun getExplorer(address: String): Result<SpwExplorerResponse> = withContext(Dispatchers.IO) {
+    open suspend fun getExplorer(address: String): Result<SpwExplorerResponse> = withContext(Dispatchers.IO) {
         try {
             val url = "$baseUrl/explorer/${address.trim()}"
             val request = Request.Builder().url(url).get().build()

@@ -74,14 +74,22 @@ class WalletApduService : HostApduService() {
                 INS_REQUEST_PAYLOAD -> {
                     val currentSessionKey = sessionKey ?: return STATUS_FAILED
                     
-                    val invoice = NfcPaymentInvoice(
+                    val requestManager = com.ryanshelby.spw.wallet.payment.PaymentRequestManager.instance
+                    val activeInvoice = requestManager.activeInvoice
+                    
+                    val invoice = activeInvoice ?: NfcPaymentInvoice(
                         address = securityManager.getWalletAddress(),
                         name = securityManager.getUserNickname(),
                         amount = null, // HCE typically acts as receiver just providing their address
                         token = null,
                         timestampMs = System.currentTimeMillis(),
-                        nonce = UUID.randomUUID().toString()
+                        nonce = java.util.UUID.randomUUID().toString()
                     )
+                    
+                    if (activeInvoice != null) {
+                        // Let the manager know the payer has connected
+                        requestManager.setConnected()
+                    }
                     
                     val encryptedPayload = NfcPayloadManager.encryptInvoice(invoice, currentSessionKey)
                     sessionKey = null // single use

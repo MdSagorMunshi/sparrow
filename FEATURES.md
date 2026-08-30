@@ -1,5 +1,20 @@
 # SPARROW Mobile Wallet - Features History
 
+### v2.2.0 (2026-08-31)
+- **NFC Tap-to-Pay Integration**:
+  - Ephemeral ECDH key exchange (secp256r1) with AES-GCM encryption for secure offline Phone-to-Phone transactions.
+  - Replay protection mechanisms utilizing nonces and millisecond-precision timestamps.
+  - Custom UI animations for Tap-to-Pay with seamless transition from `Waiting` to `Connected` to `Success`.
+- **Request Payment Feature**:
+  - Ability to request specific amounts via simultaneous NFC broadcasting and QR code generation.
+  - Dual compatibility: Scanning the QR code triggers the same pre-filled payload behavior as a physical NFC tap.
+- **Real-Time Transaction Watcher**:
+  - Background coroutine polling for matching mempool/chain transactions to auto-complete payment requests regardless of UI state.
+- **NFC & Profile Settings**:
+  - "Always Active NFC" toggle allowing the device to receive payments even when the wallet app is not explicitly opened.
+  - Configurable PIN/Biometrics requirements for authorizing NFC payments.
+  - Dedicated Profile setup with randomly generated animal names if not provided.
+
 ### v2.1.0-beta (2026-08-30)
 - **Financial-Grade Institutional Interface Redesign**:
   - Ground-up overhaul replacing legacy cyberpunk neon and violet gradients with a calm, institutional visual language inspired by Coinbase and high-end banking apps.

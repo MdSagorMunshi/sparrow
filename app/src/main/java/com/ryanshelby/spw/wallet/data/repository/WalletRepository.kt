@@ -51,7 +51,7 @@ class WalletRepository(
 ) {
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val walletDao = database.walletDao()
-    private val apiClient: SPWApiClient = rpcClient.apiClient
+    val apiClient: SPWApiClient = rpcClient.apiClient
     val appDataStore = AppDataStore(context)
 
     private val _activeNetwork = MutableStateFlow(NetworkConfig.SPW_MAINNET)
