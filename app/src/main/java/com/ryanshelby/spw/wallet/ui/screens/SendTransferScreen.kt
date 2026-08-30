@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -109,7 +110,8 @@ fun SendTransferScreen(
     onBack: () -> Unit,
     onConfirmSend: suspend (tokenSymbol: String, toAddress: String, amount: Double, gasFee: Double, memo: String, isStealth: Boolean, recipientViewPubHex: String?) -> Result<String>,
     onVerifyPin: (String) -> Boolean,
-    onTriggerBiometric: (onSuccess: () -> Unit) -> Unit
+    onTriggerBiometric: (onSuccess: () -> Unit) -> Unit,
+    onNfcTapToPayClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -265,19 +267,41 @@ fun SendTransferScreen(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfacePrimary)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                        .bouncyClickable {
-                            HapticUtil.lightTap(context)
-                            showQrScanner = true
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SurfacePrimary)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                            .bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                onNfcTapToPayClick()
+                                Toast.makeText(context, "NFC Reader Enabled. Tap to pay.", Toast.LENGTH_SHORT).show()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = "Tap to Pay",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SurfacePrimary)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                            .bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                showQrScanner = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
                         imageVector = Icons.Default.QrCodeScanner,
                         contentDescription = "Scan QR Code",
                         tint = TextPrimary,

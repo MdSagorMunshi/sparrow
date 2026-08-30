@@ -468,7 +468,6 @@ class MainActivity : FragmentActivity() {
                                     navArgument("amount") {
                                         type = NavType.StringType
                                         nullable = true
-                                        defaultValue = null
                                     }
                                 )
                             ) { backStackEntry ->
@@ -509,6 +508,9 @@ class MainActivity : FragmentActivity() {
                                                 Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
                                             }
                                         )
+                                    },
+                                    onNfcTapToPayClick = {
+                                        nfcManager.enableReaderMode()
                                     }
                                 )
                             }
@@ -522,7 +524,12 @@ class MainActivity : FragmentActivity() {
                                     viewPubHex = securityManager.getViewPubHex(),
                                     network = activeNetwork,
                                     activeLanguage = activeLanguage,
-                                    onBack = { navController.popBackStack() }
+                                    onBack = { navController.popBackStack() },
+                                    onWriteNfcTag = {
+                                        nfcManager.writeModeAddress = securityManager.getWalletAddress()
+                                        nfcManager.enableReaderMode()
+                                        Toast.makeText(context, "Ready to write NFC tag. Tap a tag.", Toast.LENGTH_SHORT).show()
+                                    }
                                 )
                             }
 

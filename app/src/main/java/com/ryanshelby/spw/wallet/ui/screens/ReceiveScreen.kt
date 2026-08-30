@@ -80,7 +80,8 @@ fun ReceiveScreen(
     viewKeyHex: String = "",
     network: NetworkConfig,
     activeLanguage: AppLanguage,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onWriteNfcTag: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -200,6 +201,16 @@ fun ReceiveScreen(
                     Column {
                         Text("NFC Tap-to-Receive Ready", color = TextPrimary, fontWeight = FontWeight.Bold)
                         Text("Tap sender's phone or tag", color = TextSecondary, fontSize = 12.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { onWriteNfcTag() },
+                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceSubtle, contentColor = TextPrimary),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Write Address to NFC Tag", fontSize = 12.sp)
+                        }
                     }
                 }
 
