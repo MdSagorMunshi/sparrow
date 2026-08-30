@@ -65,7 +65,8 @@ fun PinLockScreen(
     onPinSuccess: () -> Unit,
     onBiometricRequest: (onSuccess: () -> Unit) -> Unit,
     onSaveNewPin: (String) -> Unit = {},
-    onVerifyPin: (String) -> Boolean = { true }
+    onVerifyPin: (String) -> Boolean = { true },
+    getRemainingLockoutSeconds: () -> Long = { 0L }
 ) {
     val context = LocalContext.current
     val strings = remember(activeLanguage) { TranslationHelper.getStrings(activeLanguage) }
@@ -74,6 +75,19 @@ fun PinLockScreen(
     var confirmPinStep by remember { mutableStateOf(false) }
     var firstPinEntry by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var lockoutSeconds by remember { androidx.compose.runtime.mutableLongStateOf(getRemainingLockoutSeconds()) }
+
+    LaunchedEffect(lockoutSeconds) {
+        while (lockoutSeconds > 0L) {
+            errorMessage = "Too many failed attempts. Try again in ${lockoutSeconds}s"
+            delay(1000L)
+            val rem = getRemainingLockoutSeconds()
+            lockoutSeconds = rem
+            if (rem <= 0L) {
+                errorMessage = null
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (!isFirstTimeSetup && isBiometricAvailable) {
@@ -148,9 +162,9 @@ fun PinLockScreen(
                     text = if (isFirstTimeSetup) {
                         if (confirmPinStep) "Re-enter your 6-digit PIN to confirm" else "Protect your keys and asset transfers"
                     } else {
-                        "Enter your 6-digit passcode"
+                        if (lockoutSeconds > 0L) "Device temporarily locked" else "Enter your 6-digit passcode"
                     },
-                    color = TextSecondary,
+                    color = if (lockoutSeconds > 0L) SemanticError else TextSecondary,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center
                 )
@@ -177,7 +191,9 @@ fun PinLockScreen(
                 enteredPin = enteredPin,
                 errorMessage = errorMessage,
                 isScrambled = isScramblePin,
+                isEnabled = lockoutSeconds <= 0L,
                 onDigitClick = { digit ->
+                    if (lockoutSeconds > 0L) return@PinPadView
                     if (enteredPin.length < 6) {
                         HapticUtil.performKeyClick(context)
                         errorMessage = null
@@ -204,13 +220,26 @@ fun PinLockScreen(
                                     }
                                 }
                             } else {
-                                val isValid = onVerifyPin(newPin)
+                                val pinChars = newPin.toCharArray()
+                                val isValid: Boolean
+                                try {
+                                    isValid = onVerifyPin(newPin)
+                                } finally {
+                                    pinChars.fill('\u0000')
+                                }
+
                                 if (isValid) {
                                     HapticUtil.performSuccess(context)
                                     onPinSuccess()
                                 } else {
                                     HapticUtil.performError(context)
-                                    errorMessage = "Incorrect PIN. Please try again."
+                                    val rem = getRemainingLockoutSeconds()
+                                    if (rem > 0L) {
+                                        lockoutSeconds = rem
+                                        errorMessage = "Too many failed attempts. Try again in ${rem}s"
+                                    } else {
+                                        errorMessage = "Incorrect PIN. Please try again."
+                                    }
                                     enteredPin = ""
                                 }
                             }
@@ -224,7 +253,7 @@ fun PinLockScreen(
                         errorMessage = null
                     }
                 },
-                onBiometricClick = if (!isFirstTimeSetup && isBiometricAvailable) {
+                onBiometricClick = if (!isFirstTimeSetup && isBiometricAvailable && lockoutSeconds <= 0L) {
                     {
                         onBiometricRequest {
                             HapticUtil.performSuccess(context)

@@ -342,7 +342,8 @@ class MainActivity : FragmentActivity() {
                                             }
                                         }
                                         securityManager.verifyPin(pin)
-                                    }
+                                    },
+                                    getRemainingLockoutSeconds = { securityManager.getRemainingLockoutSeconds() }
                                 )
                             }
 

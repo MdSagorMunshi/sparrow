@@ -74,4 +74,79 @@ class SecureKeyStorageRobolectricTest {
         SecureKeyStorage.clearAllSecureKeys(context)
         assertFalse(SecureKeyStorage.hasEncryptedSeed(context))
     }
+
+    @Test
+    fun testSingleSaltImmutabilityAcrossLogins() {
+        val prefs = context.getSharedPreferences("spw_wallet_security_prefs", Context.MODE_PRIVATE)
+        securityManager.setPin("654321")
+        val initialSalt = prefs.getString("key_pin_salt", null)
+        val initialHash = prefs.getString("key_pin_hash", null)
+
+        assertNotNull(initialSalt)
+        assertNotNull(initialHash)
+
+        // Verify PIN multiple times
+        assertTrue(securityManager.verifyPin("654321"))
+        assertTrue(securityManager.verifyPin("654321"))
+
+        // Salt and hash must remain static across logins (no rotating salt)
+        val secondSalt = prefs.getString("key_pin_salt", null)
+        val secondHash = prefs.getString("key_pin_hash", null)
+        assertEquals(initialSalt, secondSalt)
+        assertEquals(initialHash, secondHash)
+    }
+
+    @Test
+    fun testStorageTamperDetectionEnforcesLockout() {
+        val prefs = context.getSharedPreferences("spw_wallet_security_prefs", Context.MODE_PRIVATE)
+        securityManager.setPin("111111")
+
+        // Fail once
+        assertFalse(securityManager.verifyPin("000000"))
+        val state1 = securityManager.getRateLimitState()
+        assertEquals(1, state1.attempts)
+        assertFalse(state1.isTampered)
+
+        // Root attacker tampers with shared_prefs XML to reset attempts to 0 without valid MAC
+        prefs.edit().putInt("key_pin_failed_attempts", 0).commit()
+
+        // SecurityManager reads state -> detects tamper -> enforces 15-minute lockout
+        val tamperedState = securityManager.getRateLimitState()
+        assertTrue(tamperedState.isTampered)
+        assertTrue(securityManager.isLockedOut())
+        assertTrue(securityManager.getRemainingLockoutSeconds() > 800L) // ~15 minutes
+
+        // Even with correct PIN, verification is rejected while locked out
+        assertFalse(securityManager.verifyPin("111111"))
+    }
+
+    @Test
+    fun testInterruptedWriteSafety() {
+        val prefs = context.getSharedPreferences("spw_wallet_security_prefs", Context.MODE_PRIVATE)
+        securityManager.setPin("123456")
+
+        // Simulate an interrupted write where salt was removed / corrupted
+        prefs.edit().remove("key_pin_salt").commit()
+
+        // App should safely reject without unhandled crash
+        assertFalse(securityManager.verifyPin("123456"))
+
+        // Re-setting PIN restores valid state
+        securityManager.setPin("123456")
+        assertTrue(securityManager.verifyPin("123456"))
+    }
+
+    @Test
+    fun testMemoryZeroization() {
+        securityManager.setPin("222222")
+
+        val pinBuffer = charArrayOf('2', '2', '2', '2', '2', '2')
+        val success = securityManager.verifyPin(pinBuffer)
+        assertTrue(success)
+
+        // Verify that pinBuffer was zeroized in memory
+        for (c in pinBuffer) {
+            assertEquals('\u0000', c)
+        }
+    }
 }

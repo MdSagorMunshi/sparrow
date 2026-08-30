@@ -58,6 +58,7 @@ fun PinPadView(
     isScrambled: Boolean = false,
     errorMessage: String? = null,
     maxDigits: Int = 6,
+    isEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -124,9 +125,9 @@ fun PinPadView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Numpad 3x4 Grid
+        // 3x4 Numerical Keypad Grid
         Column(
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Rows 1-3
@@ -139,10 +140,13 @@ fun PinPadView(
                         val digit = digits[row * 3 + col]
                         NumpadButton(
                             text = digit,
+                            isEnabled = isEnabled,
                             onClick = {
-                                HapticUtil.lightTap(context)
-                                if (enteredPin.length < maxDigits) {
-                                    onDigitClick(digit)
+                                if (isEnabled) {
+                                    HapticUtil.lightTap(context)
+                                    if (enteredPin.length < maxDigits) {
+                                        onDigitClick(digit)
+                                    }
                                 }
                             }
                         )
@@ -161,18 +165,20 @@ fun PinPadView(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(SurfacePrimary)
+                            .background(if (isEnabled) SurfacePrimary else SurfaceSubtle)
                             .border(1.dp, BorderSubtle, CircleShape)
-                            .bouncyClickable {
-                                HapticUtil.heavyClick(context)
-                                onBiometricClick()
-                            },
+                            .then(
+                                if (isEnabled) Modifier.bouncyClickable {
+                                    HapticUtil.heavyClick(context)
+                                    onBiometricClick()
+                                } else Modifier
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Fingerprint,
                             contentDescription = "Biometric Login",
-                            tint = TextPrimary,
+                            tint = if (isEnabled) TextPrimary else com.ryanshelby.spw.wallet.ui.theme.TextMuted,
                             modifier = Modifier.size(30.dp)
                         )
                     }
@@ -184,10 +190,13 @@ fun PinPadView(
                 val bottomDigit = digits[9]
                 NumpadButton(
                     text = bottomDigit,
+                    isEnabled = isEnabled,
                     onClick = {
-                        HapticUtil.lightTap(context)
-                        if (enteredPin.length < maxDigits) {
-                            onDigitClick(bottomDigit)
+                        if (isEnabled) {
+                            HapticUtil.lightTap(context)
+                            if (enteredPin.length < maxDigits) {
+                                onDigitClick(bottomDigit)
+                            }
                         }
                     }
                 )
@@ -197,18 +206,20 @@ fun PinPadView(
                     modifier = Modifier
                         .size(72.dp)
                         .clip(CircleShape)
-                        .background(SurfacePrimary)
+                        .background(if (isEnabled) SurfacePrimary else SurfaceSubtle)
                         .border(1.dp, BorderSubtle, CircleShape)
-                        .bouncyClickable {
-                            HapticUtil.lightTap(context)
-                            onBackspaceClick()
-                        },
+                        .then(
+                            if (isEnabled) Modifier.bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                onBackspaceClick()
+                            } else Modifier
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Backspace,
                         contentDescription = "Backspace",
-                        tint = TextSecondary,
+                        tint = if (isEnabled) TextSecondary else com.ryanshelby.spw.wallet.ui.theme.TextMuted,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -221,22 +232,26 @@ fun PinPadView(
 fun NumpadButton(
     text: String,
     onClick: () -> Unit,
+    isEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .size(72.dp)
             .clip(CircleShape)
-            .background(SurfaceElevated)
+            .background(if (isEnabled) SurfaceElevated else SurfaceSubtle)
             .border(1.dp, BorderSubtle, CircleShape)
-            .bouncyClickable(onClick = onClick),
+            .then(
+                if (isEnabled) Modifier.bouncyClickable(onClick = onClick)
+                else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
+            color = if (isEnabled) TextPrimary else com.ryanshelby.spw.wallet.ui.theme.TextMuted,
             fontSize = 22.sp
         )
     }
