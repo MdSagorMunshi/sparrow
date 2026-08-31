@@ -131,6 +131,20 @@ class MainActivity : FragmentActivity() {
         SPWApplication.instance.securityManager.recordBackgroundTimestamp()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::nfcManager.isInitialized) {
+            nfcManager.setPreferredWalletService()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::nfcManager.isInitialized) {
+            nfcManager.unsetPreferredWalletService()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

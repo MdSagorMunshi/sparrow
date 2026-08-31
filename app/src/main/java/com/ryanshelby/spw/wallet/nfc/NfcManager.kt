@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.security.PrivateKey
+import android.content.ComponentName
+import android.nfc.cardemulation.CardEmulation
 
 class NfcManager(private val activity: Activity) : NfcAdapter.ReaderCallback {
 
@@ -54,6 +56,27 @@ class NfcManager(private val activity: Activity) : NfcAdapter.ReaderCallback {
 
     fun disableReaderMode() {
         nfcAdapter?.disableReaderMode(activity)
+    }
+
+    fun setPreferredWalletService() {
+        if (nfcAdapter == null) return
+        try {
+            val cardEmulation = CardEmulation.getInstance(nfcAdapter)
+            val component = ComponentName(activity, WalletApduService::class.java)
+            cardEmulation.setPreferredService(activity, component)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set preferred NFC service", e)
+        }
+    }
+
+    fun unsetPreferredWalletService() {
+        if (nfcAdapter == null) return
+        try {
+            val cardEmulation = CardEmulation.getInstance(nfcAdapter)
+            cardEmulation.unsetPreferredService(activity)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to unset preferred NFC service", e)
+        }
     }
 
     override fun onTagDiscovered(tag: Tag?) {
