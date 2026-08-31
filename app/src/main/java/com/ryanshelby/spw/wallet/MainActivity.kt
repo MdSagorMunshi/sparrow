@@ -131,19 +131,7 @@ class MainActivity : FragmentActivity() {
         SPWApplication.instance.securityManager.recordBackgroundTimestamp()
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (::nfcManager.isInitialized) {
-            nfcManager.setPreferredWalletService()
-        }
-    }
 
-    override fun onPause() {
-        super.onPause()
-        if (::nfcManager.isInitialized) {
-            nfcManager.unsetPreferredWalletService()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -186,6 +174,9 @@ class MainActivity : FragmentActivity() {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
                             isNfcEnabled = nfcManager.isNfcEnabled()
+                            nfcManager.setPreferredWalletService()
+                        } else if (event == Lifecycle.Event.ON_PAUSE) {
+                            nfcManager.unsetPreferredWalletService()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)

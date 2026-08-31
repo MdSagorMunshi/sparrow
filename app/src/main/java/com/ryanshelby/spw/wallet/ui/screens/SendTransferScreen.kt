@@ -1046,7 +1046,6 @@ fun SendTransferScreen(
             }
         )
     }
-    }
 }
 
 private fun executeBroadcast(
