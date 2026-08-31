@@ -338,11 +338,12 @@ fun SendTransferScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = "Scan QR Code",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan QR Code",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
