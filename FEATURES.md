@@ -1,6 +1,6 @@
 # SPARROW Mobile Wallet - Features History
 
-### v2.2.0 (2026-08-31)
+### v2.2.0-beta (2026-08-31)
 - **NFC Tap-to-Pay Integration**:
   - Ephemeral ECDH key exchange (secp256r1) with AES-GCM encryption for secure offline Phone-to-Phone transactions.
   - Replay protection mechanisms utilizing nonces and millisecond-precision timestamps.
