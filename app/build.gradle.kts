@@ -22,6 +22,23 @@ android {
     versionName = "2.2.0-beta"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    externalNativeBuild {
+      cmake {
+        cppFlags("-std=c++17 -O3 -fPIC")
+      }
+    }
+    ndk {
+      abiFilters += listOf("arm64-v8a", "x86_64", "armeabi-v7a", "x86")
+    }
+  }
+
+  ndkVersion = "26.1.10909125"
+
+  externalNativeBuild {
+    cmake {
+      path = file("src/main/cpp/CMakeLists.txt")
+      version = "3.22.1"
+    }
   }
 
   val keystorePropertiesFile = rootProject.file("local.properties")

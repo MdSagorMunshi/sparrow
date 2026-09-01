@@ -29,6 +29,13 @@ object MiningEngine {
     }
 
     /**
+     * Derives RandomX epoch key matching miner_client.py: SPW-v1-epoch-{height // 2048}
+     */
+    fun getRxKey(height: Long): ByteArray {
+        return "SPW-v1-epoch-${height / RX_KEY_INTERVAL}".toByteArray(Charsets.UTF_8)
+    }
+
+    /**
      * Returns canonical output map matching TxOutput.to_dict(): omit empty/zero optional fields.
      */
     fun outputCanonical(o: Map<String, Any?>): Map<String, Any> {
@@ -183,7 +190,7 @@ object MiningEngine {
     }
 
     /**
-     * Calculates candidate block header hash for a given nonce.
+     * Calculates candidate block header hash for a given nonce using RandomX (or fallback).
      */
     fun calculateBlockHash(
         version: Int,
@@ -196,6 +203,10 @@ object MiningEngine {
     ): String {
         val raw = "${version}${height}${prevHash}${merkleRoot}${timestamp}${bits}${nonce}"
         val rawBytes = raw.toByteArray(Charsets.UTF_8)
+        if (RandomXNative.isAvailable()) {
+            val rxHash = RandomXNative.calculateHashHex(rawBytes)
+            if (rxHash != null) return rxHash
+        }
         return SPWCrypto.dsha256(rawBytes).toHex()
     }
 
@@ -219,11 +230,16 @@ object MiningEngine {
         val merkleRoot = header["merkle_root"]?.toString() ?: "0".repeat(64)
         var timestamp = (header["timestamp"] as? Number)?.toLong() ?: (System.currentTimeMillis() / 1000L)
 
+        // Initialize RandomX epoch key
+        if (RandomXNative.isAvailable()) {
+            RandomXNative.initKey(getRxKey(height))
+        }
+
         val target = bitsToTarget(bits)
         var nonce = 0L
 
         val throttle = cpuLimit < 99
-        val BATCH = 250
+        val BATCH = 200
         val duty = (cpuLimit.coerceIn(5, 100) / 100.0)
         val sleepRatio = (1.0 - duty) / duty
 
@@ -254,6 +270,10 @@ object MiningEngine {
                     onProgress?.invoke(nonce, rate)
                     tReport = now
                     nonceAtReport = nonce
+                }
+                // Refresh RandomX key if epoch boundary crossed
+                if (RandomXNative.isAvailable()) {
+                    RandomXNative.initKey(getRxKey(height))
                 }
             }
 
