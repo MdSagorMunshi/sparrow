@@ -1,5 +1,42 @@
 # SPARROW Mobile Wallet - Features History
 
+### v2.4.0 (2026-09-02)
+- **Dedicated Multi-Wallet & Account Management Hub (`ManageWalletsScreen`)**:
+  - Independent sub-account derivation and management with custom wallet nicknames.
+  - Interactive **12-Word (128-bit Standard)** and **24-Word (256-bit Maximum Security)** BIP-39 mnemonic recovery phrase generation.
+  - Multi-tab import suite supporting 12/24-word phrases (with real-time word counter and clipboard paste) and raw 64-hex private keys with optional dual-key stealth view key support.
+  - Instant 1-tap active account switching with immediate cached balance rendering and background RPC resync.
+  - Caution dialog requiring explicit backup acknowledgement before wallet deletion.
+  - Strict PIN/Biometrics security gate requiring verified authentication before executing deletion or decrypting private keys / recovery phrases.
+  - Automatic active account failover upon deletion; resets safely to onboarding if all accounts are cleared.
+- **Strict Decimal Financial Input Validation**:
+  - Real-time character filtering across Transfer and Receive amount inputs restricting input strictly to numbers (`0-9`) and at most one decimal point (`.`).
+  - Automatic decimal soft keypad configuration (`KeyboardType.Decimal`).
+  - Support for up to 8 decimal places for precise SPW / Feather transfers.
+- **Navigation Shortcuts**:
+  - Direct 1-tap access to Multi-Wallet Management from Dashboard wallet header and Settings security menu.
+
+### v2.3.0 (2026-09-01)
+- **Native RandomX Proof-of-Work (C++ JNI) Node Mining**:
+  - Embedded RandomX PoW engine written in C++ via NDK with ARM64 / x86_64 JIT support (`librandomx_jni.so`).
+  - 16 KB page-size compliance (`-Wl,-z,max-page-size=16384`) conforming to Android 15, 16, and modern ARM64 memory architectures.
+  - Dynamic epoch key rotation tracking blockchain height: `"SPW-v1-epoch-${height / 2048}"`.
+  - Cryptographic block candidate assembler:
+    - Generates authentic Coinbase reward transactions (`1 SPW = 100,000,000 feathers`).
+    - Deterministic, sorted canonical JSON serialization matching SPW node consensus.
+    - Double-SHA256 pairwise Merkle root hashing and compact bit target difficulty checks (`coef * 256^(exp - 3)`).
+  - Duty-cycle CPU throttling (10% to 100%) with microsecond thread yielding to prevent thermal throttling.
+  - Real-time mining telemetry status bar on Dashboard showing Total Mined, Session Mined, Accepted/Rejected shares, and Previous/Current/Next Block heights and hashes (automatically hides when mining is inactive).
+- **Bank-Grade PDF & CSV Financial Statements (`ExportStatementsScreen`)**:
+  - Publication-quality vector PDF statement generator with SPW corporate header, portfolio balance, net flow breakdown, and itemized transaction tables.
+  - Comprehensive filters by Year, Custom Date Ranges, and Transaction Types (*All*, *Incoming*, *Outgoing*, *Stealth*).
+  - Android Share sheet and direct Device Storage Save capabilities via Android `FileProvider`.
+- **Offline Balance Caching & Auto-Live Synchronization**:
+  - Instant display of cached balance with an offline warning badge when disconnected from the network.
+  - Seamless transition to live balance without UI layout jumps upon network restoration.
+- **Unified Official SPW Mining Branding**:
+  - Official vector SPW mining pickaxe logo integrated across navigation bar, dashboard quick actions, and mining telemetry controls.
+
 ### v2.2.0-beta (2026-08-31)
 - **NFC Tap-to-Pay Integration**:
   - Ephemeral ECDH key exchange (secp256r1) with AES-GCM encryption for secure offline Phone-to-Phone transactions.
@@ -90,7 +127,7 @@
 - Wallet transaction push notifications for received and sent tokens.
 - Modern in-app notification permission request flow.
 - Added Notification Settings page to customize and toggle incoming, outgoing, and mining alerts.
-- Added Mining screen UI scaffolding (Note: Active mining logic is disabled pending native RandomX algorithm integration).
+- Added Mining screen UI scaffolding.
 
 ### v1.0.0 (2026-08-28)
 - Initial public release for the SPW Network.
