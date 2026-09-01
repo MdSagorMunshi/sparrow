@@ -335,15 +335,19 @@ class WalletRepository(
             val balanceResult = apiClient.getBalance(address)
             if (securityManager.getWalletAddress() != address) return
 
+            if (!balanceResult.isSuccess) {
+                // If network is offline or request failed, retain existing cached balance intact
+                _isRefreshing.value = false
+                return
+            }
+
             var totalSpw = 0.0
             var totalFeathers = 0L
 
-            if (balanceResult.isSuccess) {
-                val bal = balanceResult.getOrNull()
-                if (bal != null) {
-                    totalSpw += bal.balanceSpw
-                    totalFeathers += bal.balanceFeathers
-                }
+            val bal = balanceResult.getOrNull()
+            if (bal != null) {
+                totalSpw += bal.balanceSpw
+                totalFeathers += bal.balanceFeathers
             }
 
             // 1b. If stealth mode is enabled, fetch balance and UTXOs from known stealth addresses
