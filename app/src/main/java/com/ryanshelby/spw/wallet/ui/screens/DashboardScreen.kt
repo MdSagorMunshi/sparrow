@@ -105,6 +105,7 @@ fun DashboardScreen(
     onNavigateToReceive: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToMining: () -> Unit,
+    onNavigateToManageWallets: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onCopyAddress: (String) -> Unit
 ) {
@@ -169,7 +170,8 @@ fun DashboardScreen(
                 onToggleHideBalance = onToggleHideBalance,
                 onCopyAddress = onCopyAddress,
                 onShowQr = onNavigateToReceive,
-                onScanQr = { showQrScanner = true }
+                onScanQr = { showQrScanner = true },
+                onManageWallets = onNavigateToManageWallets
             )
         }
 

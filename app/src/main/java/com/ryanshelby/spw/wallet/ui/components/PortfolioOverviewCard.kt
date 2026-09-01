@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,6 +102,7 @@ fun PortfolioOverviewCard(
     onCopyAddress: (String) -> Unit,
     onShowQr: () -> Unit,
     onScanQr: (() -> Unit)? = null,
+    onManageWallets: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -247,7 +249,18 @@ fun PortfolioOverviewCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = if (onManageWallets != null) {
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    HapticUtil.lightTap(context)
+                                    onManageWallets()
+                                }
+                                .padding(vertical = 2.dp, horizontal = 2.dp)
+                        } else Modifier
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(8.dp)

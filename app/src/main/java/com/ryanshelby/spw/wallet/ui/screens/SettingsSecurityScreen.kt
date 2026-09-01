@@ -158,6 +158,7 @@ fun SettingsSecurityScreen(
     onNavigateToAbout: () -> Unit = {},
     onNavigateToNfcSettings: () -> Unit = {},
     onNavigateToExportStatements: () -> Unit = {},
+    onNavigateToManageWallets: () -> Unit = {},
     onBack: () -> Unit,
     onSetBiometricEnabled: (Boolean) -> Unit,
     onSetScramblePin: (Boolean) -> Unit,
@@ -338,7 +339,7 @@ fun SettingsSecurityScreen(
                             .fillMaxWidth()
                             .clickable {
                                 HapticUtil.performKeyClick(context)
-                                showAccountsModal = true
+                                onNavigateToManageWallets()
                             }
                             .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -348,8 +349,8 @@ fun SettingsSecurityScreen(
                             Icon(Icons.Default.ManageAccounts, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("Manage SPW Accounts", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("${accounts.size} active account(s) • Switch or generate", color = TextSecondary, fontSize = 11.sp)
+                                Text("Manage SPW Accounts & Wallets", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("${accounts.size} configured • Create, import, backup, delete", color = TextSecondary, fontSize = 11.sp)
                             }
                         }
                         Text("Manage", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)

@@ -823,6 +823,32 @@ class WalletRepository(
 
 
 
+    suspend fun renameAccount(accountId: String, newName: String) {
+        walletDao.renameAccount(accountId, newName.trim())
+        val currentActive = walletDao.getAllAccountsSync().find { it.isPrimary }
+        if (currentActive?.id == accountId) {
+            securityManager.setWalletName(newName.trim())
+        }
+    }
+
+    suspend fun removeAccount(accountId: String): Boolean {
+        val allAccounts = walletDao.getAllAccountsSync()
+        val target = allAccounts.find { it.id == accountId } ?: return false
+        
+        walletDao.deleteAccount(accountId)
+
+        if (target.isPrimary) {
+            val remaining = allAccounts.filter { it.id != accountId }
+            if (remaining.isNotEmpty()) {
+                switchActiveAccount(remaining.first())
+            } else {
+                // Last account was removed -> clean up local keystore
+                resetWalletData()
+            }
+        }
+        return true
+    }
+
     suspend fun saveContact(name: String, address: String) {
         walletDao.insertContact(ContactEntity(address, name, _activeNetwork.value.name))
     }

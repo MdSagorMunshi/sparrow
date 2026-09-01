@@ -92,6 +92,7 @@ import com.ryanshelby.spw.wallet.ui.screens.ReceiveScreen
 import com.ryanshelby.spw.wallet.ui.screens.SendTransferScreen
 import com.ryanshelby.spw.wallet.ui.screens.SettingsSecurityScreen
 import com.ryanshelby.spw.wallet.ui.screens.MiningScreen
+import com.ryanshelby.spw.wallet.ui.screens.ManageWalletsScreen
 import com.ryanshelby.spw.wallet.ui.screens.AboutScreen
 import com.ryanshelby.spw.wallet.ui.components.NotificationPermissionHandler
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
@@ -471,6 +472,9 @@ class MainActivity : FragmentActivity() {
                                     onNavigateToMining = {
                                         navController.navigate("mining")
                                     },
+                                    onNavigateToManageWallets = {
+                                        navController.navigate("manage_wallets")
+                                    },
                                     onRefresh = {
                                         scope.launch {
                                             repository.refreshOnChainData()
@@ -642,6 +646,7 @@ class MainActivity : FragmentActivity() {
                                     onNavigateToAbout = { navController.navigate("about") },
                                     onNavigateToNfcSettings = { navController.navigate("nfc_settings") },
                                     onNavigateToExportStatements = { navController.navigate("export_statements") },
+                                    onNavigateToManageWallets = { navController.navigate("manage_wallets") },
                                     onBack = { navController.popBackStack() },
                                     onSetBiometricEnabled = { enabled ->
                                         isBiometricEnabled = enabled
@@ -733,6 +738,23 @@ class MainActivity : FragmentActivity() {
                                     network = activeNetwork,
                                     activeLanguage = activeLanguage,
                                     onBack = { navController.popBackStack() }
+                                )
+                            }
+
+                            // Dedicated Manage Wallets & Accounts Screen
+                            composable("manage_wallets") {
+                                ManageWalletsScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onAllAccountsRemoved = {
+                                        isWalletUnlocked = false
+                                        val rootGraphId = try { navController.graph.id } catch (_: Exception) { null }
+                                        navController.navigate("onboarding") {
+                                            if (rootGraphId != null) {
+                                                popUpTo(rootGraphId) { inclusive = true }
+                                            }
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 )
                             }
 

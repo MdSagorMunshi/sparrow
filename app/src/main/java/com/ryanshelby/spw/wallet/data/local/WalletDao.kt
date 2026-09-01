@@ -13,6 +13,9 @@ interface WalletDao {
     @Query("SELECT * FROM accounts ORDER BY createdAt ASC")
     fun getAllAccounts(): Flow<List<AccountEntity>>
 
+    @Query("SELECT * FROM accounts ORDER BY createdAt ASC")
+    suspend fun getAllAccountsSync(): List<AccountEntity>
+
     @Query("SELECT * FROM accounts WHERE id = :id LIMIT 1")
     suspend fun getAccountById(id: String): AccountEntity?
 
