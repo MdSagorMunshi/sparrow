@@ -210,9 +210,9 @@ fun ManageWalletsScreen(
                         },
                         onRename = { accountToRename = activeAccount },
                         onExportKey = {
-                            accountToExportKey = activeAccount
+                            authError = null
                             pendingAction = {
-                                // Handled by security gate
+                                accountToExportKey = activeAccount
                             }
                             showSecurityAuthModal = true
                         }
@@ -325,9 +325,9 @@ fun ManageWalletsScreen(
                     },
                     onRename = { accountToRename = account },
                     onExportKey = {
-                        accountToExportKey = account
+                        authError = null
                         pendingAction = {
-                            // Dialog triggers
+                            accountToExportKey = account
                         }
                         showSecurityAuthModal = true
                     },
@@ -915,7 +915,7 @@ fun ManageWalletsScreen(
     }
 
     // ── DIALOG: EXPORT SECRET RECOVERY PHRASE / PRIVATE KEY ──────────────────
-    if (accountToExportKey != null && !showSecurityAuthModal) {
+    if (accountToExportKey != null) {
         val target = accountToExportKey!!
         var isVisible by remember { mutableStateOf(false) }
 
@@ -1035,6 +1035,8 @@ fun ManageWalletsScreen(
             showSecurityAuthModal = false
             pendingAction = null
             authError = null
+            accountToExportKey = null
+            accountToDelete = null
         }) {
             Box(
                 modifier = Modifier
@@ -1114,6 +1116,8 @@ fun ManageWalletsScreen(
                             showSecurityAuthModal = false
                             pendingAction = null
                             authError = null
+                            accountToExportKey = null
+                            accountToDelete = null
                         }
                     ) {
                         Text("Cancel", color = TextSecondary)
