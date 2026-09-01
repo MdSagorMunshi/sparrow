@@ -12,6 +12,7 @@ import com.ryanshelby.spw.wallet.data.model.TransactionItem
 @Composable
 fun Holographic3DCard(
     isSyncing: Boolean = false,
+    isOnline: Boolean = true,
     walletName: String,
     walletAddress: String,
     totalBalanceSpw: Double,
@@ -27,6 +28,7 @@ fun Holographic3DCard(
 ) {
     PortfolioOverviewCard(
         isSyncing = isSyncing,
+        isOnline = isOnline,
         walletName = walletName,
         walletAddress = walletAddress,
         totalBalanceSpw = totalBalanceSpw,

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,6 +62,7 @@ import com.ryanshelby.spw.wallet.ui.components.TransactionDetailDialog
 import com.ryanshelby.spw.wallet.ui.components.TransactionRowSkeleton
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
 import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.AmberGold
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
 import com.ryanshelby.spw.wallet.ui.theme.SemanticError
@@ -82,6 +84,7 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     isSyncing: Boolean = false,
+    isOnline: Boolean = true,
     walletName: String,
     walletAddress: String,
     viewKeyHex: String = "",
@@ -146,6 +149,7 @@ fun DashboardScreen(
         item {
             PortfolioOverviewCard(
                 isSyncing = isSyncing,
+                isOnline = isOnline,
                 walletName = walletName,
                 walletAddress = walletAddress,
                 totalBalanceSpw = totalBalanceSpw,
@@ -158,6 +162,60 @@ fun DashboardScreen(
                 onShowQr = onNavigateToReceive,
                 onScanQr = { showQrScanner = true }
             )
+        }
+
+        // 1b. Offline Mode Notice Banner (When no internet detected)
+        if (!isOnline) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfacePrimary)
+                        .border(1.dp, AmberGold.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WifiOff,
+                            contentDescription = null,
+                            tint = AmberGold,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Offline • Showing Cached Balance",
+                                color = TextPrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Balance & on-chain data will auto-sync once internet reconnects.",
+                                color = TextSecondary,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Retry",
+                        color = AmberGold,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                onRefresh()
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
         }
 
         // 2. Quick Action Buttons Row (Send, Receive, Explorer, Mining)

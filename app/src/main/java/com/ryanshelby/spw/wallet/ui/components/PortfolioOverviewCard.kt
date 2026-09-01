@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +63,7 @@ import com.ryanshelby.spw.wallet.data.model.TransactionItem
 import com.ryanshelby.spw.wallet.data.model.TransactionType
 import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.security.SPWCrypto
+import com.ryanshelby.spw.wallet.ui.theme.AmberGold
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.FinancialSubBalanceStyle
 import com.ryanshelby.spw.wallet.ui.theme.SemanticError
@@ -87,6 +89,7 @@ import kotlin.math.abs
 @Composable
 fun PortfolioOverviewCard(
     isSyncing: Boolean = false,
+    isOnline: Boolean = true,
     walletName: String,
     walletAddress: String,
     totalBalanceSpw: Double,
@@ -373,6 +376,31 @@ fun PortfolioOverviewCard(
                                 modifier = Modifier.size(14.dp)
                             )
                         }
+                        if (!isOnline) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AmberGold.copy(alpha = 0.12f))
+                                    .border(0.8.dp, AmberGold.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.WifiOff,
+                                        contentDescription = null,
+                                        tint = AmberGold,
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = "Offline Balance",
+                                        color = AmberGold,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -464,12 +492,12 @@ fun PortfolioOverviewCard(
                         }
                     }
 
-                    // Live Node status pill
+                    // Live / Offline Node status pill
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(SurfaceElevated)
-                            .border(0.8.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                            .border(0.8.dp, if (isOnline) BorderSubtle else AmberGold.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -477,13 +505,13 @@ fun PortfolioOverviewCard(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(SemanticPositive)
+                                .background(if (isOnline) SemanticPositive else AmberGold)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "LIVE NODE",
+                            text = if (isOnline) "LIVE NODE" else "OFFLINE (CACHED)",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary,
+                            color = if (isOnline) TextSecondary else AmberGold,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp

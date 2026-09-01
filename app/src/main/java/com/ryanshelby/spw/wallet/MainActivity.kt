@@ -44,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -198,6 +199,15 @@ class MainActivity : FragmentActivity() {
 
                 var tagWriteSuccessTimestamp by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
                 var tagWriteErrorMessage by remember { mutableStateOf<String?>(null) }
+
+                val connectivityObserver = remember { com.ryanshelby.spw.wallet.security.NetworkConnectivityObserver(applicationContext) }
+                val isOnline by connectivityObserver.isOnline.collectAsState()
+
+                LaunchedEffect(isOnline) {
+                    if (isOnline && securityManager.hasWallet()) {
+                        repository.refreshOnChainData()
+                    }
+                }
 
                 LaunchedEffect(Unit) {
                     nfcManager.onInvoiceReceived = { invoice ->
@@ -425,6 +435,7 @@ class MainActivity : FragmentActivity() {
                             composable("dashboard") {
                                 DashboardScreen(
                                     isSyncing = isInitialSyncing,
+                                    isOnline = isOnline,
                                     walletName = securityManager.getWalletName(),
                                     walletAddress = securityManager.getWalletAddress(),
                                     viewKeyHex = securityManager.getViewKeyHex(),
