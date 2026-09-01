@@ -18,8 +18,8 @@ android {
     applicationId = "com.ryanshelby.spw.wallet"
     minSdk = 24
     targetSdk = 37
-    versionCode = 4
-    versionName = "2.2.0-beta"
+    versionCode = 5
+    versionName = "3.0.0-beta"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     externalNativeBuild {

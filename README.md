@@ -4,6 +4,7 @@
 **Institutional-Grade Android Wallet & Native Node Miner for the SPW Network**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/Version-3.0.0--beta-green.svg)](#)
 [![Android](https://img.shields.io/badge/Platform-Android%2015%2F16%20(16KB%20Ready)-3DDC84?logo=android&logoColor=white)](#)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin%20%2F%20C%2B%2B%20JNI-7F52FF?logo=kotlin&logoColor=white)](#)
 [![PoW](https://img.shields.io/badge/PoW%20Engine-RandomX%20Native-FF6F00)](#)

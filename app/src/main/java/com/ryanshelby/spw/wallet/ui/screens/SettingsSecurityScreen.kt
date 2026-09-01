@@ -1183,7 +1183,7 @@ fun SettingsSecurityScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text("About SPARROW", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text("v2.1.0-beta • Unofficial Client • Developer Info", color = TextSecondary, fontSize = 11.sp)
+                                Text("v3.0.0-beta • Unofficial Client • Developer Info", color = TextSecondary, fontSize = 11.sp)
                             }
                         }
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))

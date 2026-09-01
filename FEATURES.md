@@ -1,6 +1,6 @@
 # SPARROW Mobile Wallet - Features History
 
-### v2.5.0 (2026-09-02)
+### v3.0.0-beta (2026-09-02) - *Major 3.0.0 Beta Release*
 - **🧅 Tor & SOCKS5 Proxy Onion Routing**:
   - Full network anonymity layer routing all SPW RPC and mempool communication through Tor or custom SOCKS5/HTTP proxies.
   - Orbot preset (`127.0.0.1:9050`) for 1-tap Tor routing.

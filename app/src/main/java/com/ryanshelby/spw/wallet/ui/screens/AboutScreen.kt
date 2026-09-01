@@ -264,7 +264,7 @@ fun AboutScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SpecRow(label = "App Version", value = "v2.2.0-beta")
+                    SpecRow(label = "App Version", value = "v3.0.0-beta")
                     SpecRow(label = "Release Channel", value = "Public Beta Preview")
                     SpecRow(label = "Network Compatibility", value = "SPW Protocol v1.0")
                     SpecRow(label = "Architecture", value = "Kotlin Multiplatform • Jetpack Compose")
