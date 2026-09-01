@@ -1,7 +1,8 @@
 package com.ryanshelby.spw.wallet.mining
 
 import android.content.Context
-import com.ryanshelby.spw.wallet.security.SPWCrypto
+import com.ryanshelby.spw.wallet.SPWApplication
+import com.ryanshelby.spw.wallet.data.remote.SPWApiClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,11 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Locale
-import kotlin.random.Random
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * State of the on-chain node mining engine.
+ * Observable UI state of the on-chain node mining engine.
  */
 data class MiningState(
     val isActive: Boolean = false,
@@ -26,31 +29,35 @@ data class MiningState(
     val totalMinedSpw: Double = 0.0,
     val acceptedShares: Int = 0,
     val rejectedShares: Int = 0,
-    val previousBlockHeight: Long = 104231L,
-    val previousBlockHash: String = "00000a4b9f2c",
-    val currentBlockHeight: Long = 104232L,
-    val currentBlockHash: String = "00000e8f1c4a",
-    val nextBlockHeight: Long = 104233L,
-    val nextBlockName: String = "Block #104233 (Pending)",
+    val previousBlockHeight: Long = 0L,
+    val previousBlockHash: String = "0".repeat(12),
+    val currentBlockHeight: Long = 1L,
+    val currentBlockHash: String = "0".repeat(12),
+    val nextBlockHeight: Long = 2L,
+    val nextBlockName: String = "Block #2 (Pending)",
     val logs: List<String> = emptyList()
 )
 
 /**
- * Singleton engine manager for mobile PoW node mining, live share verification,
- * block template monitoring, and real-time session telemetry.
+ * Singleton manager coordinating the real Proof-of-Work node mining engine,
+ * blockchain RPC polling, block assembly, submission, and UI telemetry.
  */
 class MiningManager(private val context: Context) {
 
     private val prefs = context.getSharedPreferences("spw_mining_prefs", Context.MODE_PRIVATE)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var miningJob: Job? = null
+    private val stopFlag = AtomicBoolean(false)
+
+    private val apiClient: SPWApiClient
+        get() = SPWApplication.instance.rpcClient.apiClient
 
     private val _state = MutableStateFlow(
         MiningState(
             totalMinedSpw = prefs.getFloat("total_mined_spw", 0.0f).toDouble(),
             logs = listOf(
-                "> Node daemon connected to SPW network.",
-                "> Cryptographic mining subsystem loaded in standby."
+                "> SPW Mining Subsystem initialized.",
+                "> Standby mode active. Ready to connect to node."
             )
         )
     )
@@ -58,7 +65,7 @@ class MiningManager(private val context: Context) {
 
     fun startMining(payoutAddress: String, cpuAllocation: Int = 50) {
         if (_state.value.isActive) return
-        val startHeight = 104230L + Random.nextLong(100, 500)
+        stopFlag.set(false)
 
         _state.value = _state.value.copy(
             isActive = true,
@@ -66,103 +73,154 @@ class MiningManager(private val context: Context) {
             sessionMinedSpw = 0.0,
             acceptedShares = 0,
             rejectedShares = 0,
-            previousBlockHeight = startHeight - 1,
-            previousBlockHash = "00000" + SPWCrypto.sha256Hex("prev_$startHeight").take(8),
-            currentBlockHeight = startHeight,
-            currentBlockHash = "00000" + SPWCrypto.sha256Hex("curr_$startHeight").take(8),
-            nextBlockHeight = startHeight + 1,
-            nextBlockName = "Block #${startHeight + 1} (Pending)",
-            logs = _state.value.logs + listOf(
-                "> Mining Engine started at ${cpuAllocation}% CPU allocation.",
-                "> Payout target: ${if (payoutAddress.length > 14) "${payoutAddress.take(8)}...${payoutAddress.takeLast(6)}" else payoutAddress}",
-                "> Subscribed to block template #${startHeight}..."
-            )
+            hashRate = 0.0
         )
 
-        miningJob = scope.launch {
-            var sessionSpw = 0.0
-            var accepted = 0
-            var rejected = 0
-            var height = startHeight
+        appendLog("> Connecting to node: ${apiClient.getNodeUrl()}")
+        appendLog("> Payout address: ${if (payoutAddress.length > 14) "${payoutAddress.take(8)}...${payoutAddress.takeLast(6)}" else payoutAddress}")
+        appendLog("> Initializing PoW candidate engine at ${cpuAllocation}% CPU limit...")
 
-            while (isActive) {
-                delay(1200)
+        miningJob = scope.launch(Dispatchers.Default) {
+            while (isActive && !stopFlag.get()) {
+                try {
+                    // 1. Fetch latest blockchain info & mempool from node
+                    val latestBlock = apiClient.fetchLatestBlock().getOrNull()
+                    val chainInfo = apiClient.fetchChainInfo().getOrNull()
+                    val mempoolTxs = apiClient.fetchMempool().getOrNull() ?: emptyList()
 
-                // Calculate realistic dynamic hashrate based on CPU limit
-                val baseRate = (cpuAllocation * 0.85) + Random.nextDouble(-3.5, 4.2)
-                val currentRate = baseRate.coerceAtLeast(5.0)
+                    val targetHeight = if (latestBlock?.header != null) latestBlock.header.height + 1 else (chainInfo?.height?.plus(1) ?: 1L)
+                    val prevHash = latestBlock?.hash ?: "0".repeat(64)
+                    val rewardSpw = chainInfo?.nextReward ?: 1.0
+                    val bits = latestBlock?.header?.bits ?: MiningEngine.GENESIS_BITS
 
-                // Share computation simulation
-                val isShareFound = Random.nextInt(100) < 45
-                val newLogs = _state.value.logs.toMutableList()
+                    _state.value = _state.value.copy(
+                        previousBlockHeight = (targetHeight - 1).coerceAtLeast(0),
+                        previousBlockHash = prevHash.take(12),
+                        currentBlockHeight = targetHeight,
+                        currentBlockHash = "mining...",
+                        nextBlockHeight = targetHeight + 1,
+                        nextBlockName = "Block #${targetHeight + 1} (Pending)"
+                    )
 
-                if (isShareFound) {
-                    val isAccepted = Random.nextInt(100) < 95
-                    if (isAccepted) {
-                        accepted++
-                        val reward = 0.0025 + Random.nextDouble(0.0005, 0.0020)
-                        sessionSpw += reward
-                        val newTotal = _state.value.totalMinedSpw + reward
-                        prefs.edit().putFloat("total_mined_spw", newTotal.toFloat()).apply()
+                    appendLog("> Mining block #$targetHeight (reward: ${String.format(Locale.US, "%.2f", rewardSpw)} SPW, mempool txs: ${mempoolTxs.size})...")
 
-                        newLogs.add("> Share accepted! Nonce: 0x${Random.nextLong(0xFFFFFFL).toString(16).padStart(6, '0')} (+${String.format(Locale.US, "%.4f", reward)} SPW)")
-                        if (newLogs.size > 25) newLogs.removeAt(0)
+                    // 2. Build candidate block
+                    val candidate = MiningEngine.buildCandidate(
+                        latestBlock = latestBlock,
+                        minerAddress = payoutAddress,
+                        rewardSpw = rewardSpw,
+                        mempoolTxs = mempoolTxs
+                    ).toMutableMap()
 
-                        // Occasional block progression
-                        if (accepted % 6 == 0) {
-                            height++
-                            val prevHash = _state.value.currentBlockHash
-                            val newCurrHash = "00000" + SPWCrypto.sha256Hex("curr_$height").take(8)
-                            newLogs.add(">>> NEW BLOCK FOUND #${height}! Hash: $newCurrHash")
-                            if (newLogs.size > 25) newLogs.removeAt(0)
+                    val tStart = System.currentTimeMillis()
+
+                    // 3. Run PoW nonce search
+                    val result = MiningEngine.mineBlock(
+                        candidate = candidate,
+                        bits = bits,
+                        stopFlag = stopFlag,
+                        cpuLimit = _state.value.cpuAllocation,
+                        onProgress = { nonces, rate ->
+                            _state.value = _state.value.copy(hashRate = rate)
+                        }
+                    )
+
+                    if (result != null && !stopFlag.get()) {
+                        val (nonce, blockHash) = result
+                        val elapsedSec = (System.currentTimeMillis() - tStart) / 1000.0
+                        val rate = if (elapsedSec > 0) (nonce / elapsedSec) else 0.0
+
+                        appendLog(">>> Nonce found! Nonce: $nonce, Hash: ${blockHash.take(14)}...")
+                        appendLog("> Submitting block #$targetHeight to node...")
+
+                        // 4. Submit candidate block to node
+                        val blockJson = mapToJsonString(candidate)
+                        val submitResult = apiClient.submitBlock(blockJson)
+
+                        if (submitResult.isSuccess) {
+                            val newAccepted = _state.value.acceptedShares + 1
+                            val newSessionMined = _state.value.sessionMinedSpw + rewardSpw
+                            val newTotalMined = _state.value.totalMinedSpw + rewardSpw
+                            prefs.edit().putFloat("total_mined_spw", newTotalMined.toFloat()).apply()
 
                             _state.value = _state.value.copy(
-                                previousBlockHeight = height - 1,
-                                previousBlockHash = prevHash,
-                                currentBlockHeight = height,
-                                currentBlockHash = newCurrHash,
-                                nextBlockHeight = height + 1,
-                                nextBlockName = "Block #${height + 1} (Pending)"
+                                acceptedShares = newAccepted,
+                                sessionMinedSpw = newSessionMined,
+                                totalMinedSpw = newTotalMined,
+                                currentBlockHash = blockHash.take(12),
+                                hashRate = rate
                             )
-                        }
 
-                        _state.value = _state.value.copy(
-                            hashRate = currentRate,
-                            sessionMinedSpw = sessionSpw,
-                            totalMinedSpw = newTotal,
-                            acceptedShares = accepted,
-                            logs = newLogs
-                        )
-                    } else {
-                        rejected++
-                        newLogs.add("> Share rejected (stale work): non-matching difficulty")
-                        if (newLogs.size > 25) newLogs.removeAt(0)
-                        _state.value = _state.value.copy(
-                            hashRate = currentRate,
-                            rejectedShares = rejected,
-                            logs = newLogs
-                        )
+                            appendLog("✓ Block #$targetHeight ACCEPTED by node! (+${String.format(Locale.US, "%.4f", rewardSpw)} SPW)")
+
+                            // Trigger wallet repository refresh to update confirmed balance
+                            try {
+                                SPWApplication.instance.walletRepository.refreshOnChainData()
+                            } catch (_: Exception) {}
+                        } else {
+                            val errMsg = submitResult.exceptionOrNull()?.message ?: "Unknown error"
+                            _state.value = _state.value.copy(
+                                rejectedShares = _state.value.rejectedShares + 1
+                            )
+                            appendLog("✗ Block #$targetHeight Rejected by node: $errMsg. Rebuilding candidate...")
+                            delay(600)
+                        }
                     }
-                } else {
-                    _state.value = _state.value.copy(
-                        hashRate = currentRate
-                    )
+                } catch (e: Exception) {
+                    if (!stopFlag.get()) {
+                        appendLog("! Node communication notice: ${e.localizedMessage ?: "retrying"}. Retrying in 2s...")
+                        delay(2000)
+                    }
                 }
             }
         }
     }
 
     fun stopMining() {
+        stopFlag.set(true)
         miningJob?.cancel()
         miningJob = null
         _state.value = _state.value.copy(
             isActive = false,
-            hashRate = 0.0,
-            logs = _state.value.logs + "> Mining Engine stopped by user."
+            hashRate = 0.0
         )
+        appendLog("> Mining Engine stopped by user.")
     }
 
     fun updateCpuAllocation(newCpu: Int) {
         _state.value = _state.value.copy(cpuAllocation = newCpu)
+    }
+
+    private fun appendLog(msg: String) {
+        val currentLogs = _state.value.logs.toMutableList()
+        currentLogs.add(msg)
+        if (currentLogs.size > 50) {
+            currentLogs.removeAt(0)
+        }
+        _state.value = _state.value.copy(logs = currentLogs)
+    }
+
+    private fun mapToJsonString(map: Map<*, *>): String {
+        val json = JSONObject()
+        for ((k, v) in map) {
+            when (v) {
+                is Map<*, *> -> json.put(k.toString(), JSONObject(mapToJsonString(v)))
+                is List<*> -> json.put(k.toString(), listToJsonArray(v))
+                else -> json.put(k.toString(), v)
+            }
+        }
+        return json.toString()
+    }
+
+    private fun listToJsonArray(list: List<*>): JSONArray {
+        val arr = JSONArray()
+        for (item in list) {
+            when (item) {
+                is Map<*, *> -> arr.put(JSONObject(mapToJsonString(item)))
+                is List<*> -> arr.put(listToJsonArray(item))
+                else -> arr.put(item)
+            }
+        }
+        return arr
     }
 }

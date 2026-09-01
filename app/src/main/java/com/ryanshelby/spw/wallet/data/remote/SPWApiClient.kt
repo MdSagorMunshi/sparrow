@@ -106,6 +106,43 @@ data class SpwBlockResponse(
     @Json(name = "transactions") val transactions: List<SpwTransaction> = emptyList()
 )
 
+@JsonClass(generateAdapter = true)
+data class SpwBlockHeaderDto(
+    @Json(name = "version") val version: Int = 1,
+    @Json(name = "height") val height: Long = 0L,
+    @Json(name = "prev_hash") val prevHash: String = "",
+    @Json(name = "merkle_root") val merkleRoot: String = "",
+    @Json(name = "timestamp") val timestamp: Long = 0L,
+    @Json(name = "bits") val bits: Long = 0x1f07ffffL,
+    @Json(name = "nonce") val nonce: Long = 0L
+)
+
+@JsonClass(generateAdapter = true)
+data class SpwLatestBlockDto(
+    @Json(name = "header") val header: SpwBlockHeaderDto? = null,
+    @Json(name = "hash") val hash: String = "",
+    @Json(name = "transactions") val transactions: List<Map<String, Any?>> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class SpwChainInfoDto(
+    @Json(name = "height") val height: Long = 0L,
+    @Json(name = "next_reward") val nextReward: Double = 1.0,
+    @Json(name = "network") val network: String? = null,
+    @Json(name = "difficulty") val difficulty: Double? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SpwMempoolDto(
+    @Json(name = "transactions") val transactions: List<Map<String, Any?>> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class SpwBlockSubmitResponse(
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "error") val error: String? = null
+)
+
 open class SPWApiClient(
     private var baseUrl: String = SPWCrypto.DEFAULT_NODE_URL
 ) {
@@ -254,6 +291,84 @@ open class SPWApiClient(
             } else 0L
         } catch (e: Exception) {
             0L
+        }
+    }
+
+    suspend fun fetchLatestBlock(): Result<SpwLatestBlockDto?> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/block/latest"
+            val request = Request.Builder().url(url).get().build()
+            val response = client.newCall(request).execute()
+            if (response.code == 404) {
+                return@withContext Result.success(null) // Genesis
+            }
+            val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty body"))
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("HTTP ${response.code}: $body"))
+            }
+            val adapter = moshi.adapter(SpwLatestBlockDto::class.java)
+            val result = adapter.fromJson(body)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun fetchChainInfo(): Result<SpwChainInfoDto> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/chain/info"
+            val request = Request.Builder().url(url).get().build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty body"))
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("HTTP ${response.code}: $body"))
+            }
+            val adapter = moshi.adapter(SpwChainInfoDto::class.java)
+            val result = adapter.fromJson(body) ?: SpwChainInfoDto()
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun fetchMempool(): Result<List<Map<String, Any?>>> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/mempool"
+            val request = Request.Builder().url(url).get().build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: return@withContext Result.success(emptyList())
+            if (!response.isSuccessful) {
+                return@withContext Result.success(emptyList())
+            }
+            val adapter = moshi.adapter(SpwMempoolDto::class.java)
+            val result = adapter.fromJson(body)
+            Result.success(result?.transactions ?: emptyList())
+        } catch (e: Exception) {
+            Result.success(emptyList())
+        }
+    }
+
+    suspend fun submitBlock(blockJson: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseUrl/block/submit"
+            val body = blockJson.toRequestBody("application/json; charset=utf-8".toMediaType())
+            val request = Request.Builder().url(url).post(body).build()
+            val response = client.newCall(request).execute()
+            val responseBody = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
+            val adapter = moshi.adapter(SpwBlockSubmitResponse::class.java)
+            val parsed = try { adapter.fromJson(responseBody) } catch (e: Exception) { null }
+
+            if (!response.isSuccessful) {
+                val errMsg = parsed?.error ?: "HTTP ${response.code}: $responseBody"
+                return@withContext Result.failure(Exception(errMsg))
+            }
+            if (parsed?.status == "accepted" || response.isSuccessful) {
+                Result.success(parsed?.status ?: "accepted")
+            } else {
+                Result.failure(Exception(parsed?.error ?: "Block rejected by node"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }
