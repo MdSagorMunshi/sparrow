@@ -259,7 +259,7 @@ fun DashboardScreen(
                     }
                 )
                 QuickActionButton(
-                    icon = ImageVector.vectorResource(id = R.drawable.ic_mining_pickaxe),
+                    icon = ImageVector.vectorResource(id = R.drawable.ic_mining),
                     label = "Mining",
                     onClick = {
                         HapticUtil.lightTap(context)

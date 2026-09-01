@@ -859,7 +859,7 @@ private fun FinanceBottomNavigationBar(
                     onClick = { onNavigate("receive") }
                 )
                 FinanceNavItem(
-                    icon = ImageVector.vectorResource(id = R.drawable.ic_mining_pickaxe),
+                    icon = ImageVector.vectorResource(id = R.drawable.ic_mining),
                     label = "Mining",
                     isSelected = currentRoute == "mining",
                     onClick = { onNavigate("mining") }
