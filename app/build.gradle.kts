@@ -25,6 +25,7 @@ android {
     externalNativeBuild {
       cmake {
         cppFlags("-std=c++17 -O3 -fPIC")
+        arguments("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
       }
     }
     ndk {

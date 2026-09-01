@@ -60,3 +60,8 @@ target_include_directories(randomx_jni PRIVATE
 target_link_libraries(randomx_jni
     log
 )
+
+target_link_options(randomx_jni PRIVATE
+    "-Wl,-z,max-page-size=16384"
+)
+
