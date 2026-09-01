@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -62,7 +62,7 @@ fun NfcRippleAnimation(modifier: Modifier = Modifier) {
                 .background(CyanNeon.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Speed, contentDescription = "NFC Active", tint = CyanNeon, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Nfc, contentDescription = "NFC Active", tint = CyanNeon, modifier = Modifier.size(32.dp))
         }
     }
 }

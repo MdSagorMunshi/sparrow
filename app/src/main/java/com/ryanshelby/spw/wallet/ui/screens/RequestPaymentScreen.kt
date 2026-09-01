@@ -145,34 +145,49 @@ fun RequestPaymentScreen(
             }
             
             PaymentRequestState.WAITING -> {
-                Text("Waiting for Payment", color = AccentPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Tap NFC or scan QR Code", color = TextSecondary, fontSize = 14.sp)
+                Text("Waiting for Payment", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Tap NFC phone or scan QR Code to pay", color = TextSecondary, fontSize = 13.sp)
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 if (activeInvoice != null) {
                     val qrData = activeInvoice.toJson()
                     GlowingQrCodeView(
                         data = qrData,
-                        sizeDp = 220.dp
+                        sizeDp = 270.dp,
+                        showCenterBadge = false
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "${activeInvoice.amount} SPW Requested",
+                        color = CyanNeon,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(24.dp))
-                CircularProgressIndicator(color = AccentPrimary, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(color = CyanNeon, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Listening for NFC & on-chain tx...", color = TextMuted, fontSize = 12.sp)
+                }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 
                 Button(
                     onClick = {
                         requestManager.cancelRequest()
                         transactionWatcher.stopWatching()
                     },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceElevated)
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceElevated),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("Cancel Request", color = SemanticError)
+                    Text("Cancel Request", color = SemanticError, fontWeight = FontWeight.SemiBold)
                 }
             }
             

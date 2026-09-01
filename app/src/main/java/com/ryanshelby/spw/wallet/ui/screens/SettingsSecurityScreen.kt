@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Public
@@ -714,7 +715,7 @@ fun SettingsSecurityScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Speed, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Default.Nfc, contentDescription = null, tint = GreenEmerald, modifier = Modifier.size(22.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text("NFC Tap-to-Pay Settings", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)

@@ -196,17 +196,21 @@ class MainActivity : FragmentActivity() {
                 var pendingNfcInvoice by remember { mutableStateOf<com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice?>(null) }
                 var sendToggleEnabled by remember { mutableStateOf(securityManager.isNfcSendToggleEnabled()) }
 
+                var tagWriteSuccessTimestamp by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+                var tagWriteErrorMessage by remember { mutableStateOf<String?>(null) }
+
                 LaunchedEffect(Unit) {
                     nfcManager.onInvoiceReceived = { invoice ->
                         pendingNfcInvoice = invoice
                         HapticUtil.performSuccess(context)
                     }
                     nfcManager.onTagWriteSuccess = {
-                        Toast.makeText(context, "NFC Tag Written Successfully", Toast.LENGTH_SHORT).show()
+                        tagWriteSuccessTimestamp = System.currentTimeMillis()
                         HapticUtil.performSuccess(context)
                     }
                     nfcManager.onTagWriteError = { err ->
-                        Toast.makeText(context, "NFC Tag Write Failed: $err", Toast.LENGTH_LONG).show()
+                        tagWriteErrorMessage = err
+                        HapticUtil.performError(context)
                     }
                 }
 
@@ -558,11 +562,6 @@ class MainActivity : FragmentActivity() {
                                     isNfcSupported = isNfcSupported,
                                     isNfcEnabled = isNfcEnabled,
                                     onBack = { navController.popBackStack() },
-                                    onWriteNfcTag = {
-                                        nfcManager.writeModeAddress = securityManager.getWalletAddress()
-                                        nfcManager.enableReaderMode()
-                                        Toast.makeText(context, "Ready to write NFC tag. Tap a tag.", Toast.LENGTH_SHORT).show()
-                                    },
                                     onNavigateToRequestPayment = {
                                         navController.navigate("request_payment")
                                     }
@@ -699,6 +698,17 @@ class MainActivity : FragmentActivity() {
                                     securityManager = securityManager,
                                     isNfcSupported = isNfcSupported,
                                     isNfcEnabled = isNfcEnabled,
+                                    onStartWriteTag = { address ->
+                                        tagWriteErrorMessage = null
+                                        nfcManager.writeModeAddress = address
+                                        nfcManager.enableReaderMode()
+                                    },
+                                    onStopWriteTag = {
+                                        nfcManager.writeModeAddress = null
+                                        nfcManager.disableReaderMode()
+                                    },
+                                    tagWriteSuccessEvent = tagWriteSuccessTimestamp,
+                                    tagWriteErrorEvent = tagWriteErrorMessage,
                                     onBack = { navController.popBackStack() }
                                 )
                             }

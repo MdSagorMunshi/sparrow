@@ -43,16 +43,16 @@ import com.ryanshelby.spw.wallet.ui.theme.TextPrimary
 fun GlowingQrCodeView(
     data: String,
     modifier: Modifier = Modifier,
-    sizeDp: Dp = 220.dp,
-    showScannerEffect: Boolean = false
+    sizeDp: Dp = 260.dp,
+    showCenterBadge: Boolean = false
 ) {
-    // Generate a high-contrast QR code matrix using ZXing with H error correction
+    // Generate a high-contrast QR code matrix using ZXing with M error correction for optimal module size & readability
     val matrix = remember(data) {
         if (data.isBlank()) null
         else {
             try {
                 val hints = mapOf(
-                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.H,
+                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
                     EncodeHintType.MARGIN to 1,
                     EncodeHintType.CHARACTER_SET to "UTF-8"
                 )
@@ -83,56 +83,48 @@ fun GlowingQrCodeView(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(6.dp),
+                .padding(4.dp),
             contentAlignment = Alignment.Center
         ) {
             if (matrix != null) {
                 val gridSize = matrix.size
-                val badgeRadiusFraction = 0.09f
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val canvasWidth = size.width
                     val cellSize = canvasWidth / gridSize.toFloat()
 
-                    val centerX = gridSize / 2f
-                    val centerY = gridSize / 2f
-                    val badgeRadius = gridSize * badgeRadiusFraction
-
-                    // High-contrast clean white modules on dark background
+                    // High-contrast clean modules on dark background
                     for (r in 0 until gridSize) {
                         for (c in 0 until gridSize) {
-                            val dx = c + 0.5f - centerX
-                            val dy = r + 0.5f - centerY
-                            if (dx * dx + dy * dy < badgeRadius * badgeRadius) continue
-
                             if (matrix[r][c]) {
-                                val topLeft = Offset(c * cellSize + 0.5f, r * cellSize + 0.5f)
+                                val topLeft = Offset(c * cellSize, r * cellSize)
                                 drawRoundRect(
                                     color = TextPrimary,
                                     topLeft = topLeft,
-                                    size = Size(cellSize - 0.8f, cellSize - 0.8f),
-                                    cornerRadius = CornerRadius(2.5f, 2.5f)
+                                    size = Size(cellSize, cellSize),
+                                    cornerRadius = CornerRadius(1.5f, 1.5f)
                                 )
                             }
                         }
                     }
                 }
 
-                // Clean center SPW badge
-                Box(
-                    modifier = Modifier
-                        .size((sizeDp.value * 0.2f).dp)
-                        .clip(CircleShape)
-                        .background(FinanceBackground)
-                        .border(1.dp, BorderStrong, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "SPW",
-                        color = AccentPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (showCenterBadge) {
+                    Box(
+                        modifier = Modifier
+                            .size((sizeDp.value * 0.14f).dp)
+                            .clip(CircleShape)
+                            .background(FinanceBackground)
+                            .border(1.dp, BorderStrong, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "SPW",
+                            color = AccentPrimary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
