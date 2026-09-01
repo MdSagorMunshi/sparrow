@@ -3,7 +3,7 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#14171F"
+    android:background="@drawable/widget_bg"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -15,8 +15,8 @@
         android:orientation="horizontal">
 
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:src="@drawable/ic_mining"
             android:contentDescription="SPW Logo" />
 
@@ -35,7 +35,7 @@
             android:id="@+id/widget_status_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="#10B981"
+            android:background="@drawable/widget_status_bg"
             android:paddingStart="6dp"
             android:paddingTop="2dp"
             android:paddingEnd="6dp"
@@ -46,7 +46,8 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <View
+    <!-- Divider (FrameLayout is explicitly supported in RemoteViews) -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="10dp"
@@ -89,27 +90,38 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <Button
+            <TextView
                 android:id="@+id/widget_btn_send"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:backgroundTint="#00E5FF"
+                android:layout_height="wrap_content"
+                android:background="@drawable/widget_btn_bg"
+                android:gravity="center"
+                android:paddingStart="14dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="8dp"
                 android:text="Send"
                 android:textColor="#0C0E12"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
-            <Button
+            <TextView
                 android:id="@+id/widget_btn_mine"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="#242B38"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/widget_btn_mine_bg"
+                android:gravity="center"
+                android:paddingStart="14dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="8dp"
                 android:text="Mine"
                 android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>

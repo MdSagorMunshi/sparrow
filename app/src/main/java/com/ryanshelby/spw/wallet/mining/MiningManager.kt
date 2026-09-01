@@ -64,7 +64,16 @@ class MiningManager(private val context: Context) {
     val state: StateFlow<MiningState> = _state.asStateFlow()
 
     fun startMining(payoutAddress: String, cpuAllocation: Int = 50) {
-        if (_state.value.isActive) return
+        try {
+            com.ryanshelby.spw.wallet.service.MiningForegroundService.startService(context, payoutAddress, cpuAllocation)
+        } catch (e: Exception) {
+            // Fallback for direct testing or environment restrictions
+            startMiningInternal(payoutAddress, cpuAllocation)
+        }
+    }
+
+    fun startMiningInternal(payoutAddress: String, cpuAllocation: Int = 50) {
+        if (_state.value.isActive && miningJob?.isActive == true) return
         stopFlag.set(false)
 
         _state.value = _state.value.copy(
@@ -80,6 +89,7 @@ class MiningManager(private val context: Context) {
         appendLog("> Payout address: ${if (payoutAddress.length > 14) "${payoutAddress.take(8)}...${payoutAddress.takeLast(6)}" else payoutAddress}")
         appendLog("> Initializing PoW candidate engine at ${cpuAllocation}% CPU limit...")
 
+        miningJob?.cancel()
         miningJob = scope.launch(Dispatchers.Default) {
             while (isActive && !stopFlag.get()) {
                 try {
@@ -177,6 +187,14 @@ class MiningManager(private val context: Context) {
     }
 
     fun stopMining() {
+        try {
+            com.ryanshelby.spw.wallet.service.MiningForegroundService.stopService(context)
+        } catch (e: Exception) {
+            stopMiningInternal()
+        }
+    }
+
+    fun stopMiningInternal() {
         stopFlag.set(true)
         miningJob?.cancel()
         miningJob = null
