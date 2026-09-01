@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
+import com.ryanshelby.spw.wallet.data.model.TransactionType
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -14,12 +15,16 @@ import java.util.Locale
  */
 object CsvExportUtil {
 
-    fun generateCsv(transactions: List<TransactionItem>): String {
+    fun generateCsv(transactions: List<TransactionItem>, includeSummary: Boolean = true): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         val sb = StringBuilder()
 
         // CSV Header
-        sb.append("Date,Timestamp,Transaction ID,Type,Token,Amount,Fee SPW,From Address,To Address,Status,Block Number,Memo\n")
+        sb.append("Date (UTC),Timestamp,Transaction ID,Type,Token,Amount SPW,Fee SPW,From Address,To Address,Status,Block Number,Memo\n")
+
+        var totalInflow = 0.0
+        var totalOutflow = 0.0
+        var totalFees = 0.0
 
         for (tx in transactions) {
             val dateStr = try {
@@ -39,22 +44,45 @@ object CsvExportUtil {
             val block = tx.blockNumber.toString()
             val memo = escapeCsv(tx.memo)
 
+            if (tx.type == TransactionType.RECEIVE) {
+                totalInflow += tx.amountSpw
+            } else if (tx.type == TransactionType.SEND || tx.type == TransactionType.STEALTH) {
+                totalOutflow += tx.amountSpw
+            }
+            totalFees += tx.feeSpw
+
             sb.append("$dateStr,${tx.timestamp},$txid,$typeStr,$token,$amount,$fee,$from,$to,$status,$block,$memo\n")
+        }
+
+        if (includeSummary && transactions.isNotEmpty()) {
+            val netVolume = totalInflow - totalOutflow
+            sb.append("\n")
+            sb.append("--- FINANCIAL AUDIT SUMMARY ---\n")
+            sb.append("Total Inflows (SPW),${String.format(Locale.US, "%.8f", totalInflow)}\n")
+            sb.append("Total Outflows (SPW),${String.format(Locale.US, "%.8f", totalOutflow)}\n")
+            sb.append("Net Volume (SPW),${String.format(Locale.US, "%.8f", netVolume)}\n")
+            sb.append("Total Gas Fees (SPW),${String.format(Locale.US, "%.8f", totalFees)}\n")
+            sb.append("Total Transaction Count,${transactions.size}\n")
         }
 
         return sb.toString()
     }
 
-    fun exportAndShareCsv(context: Context, transactions: List<TransactionItem>): Boolean {
+    fun exportAndShareCsv(
+        context: Context,
+        transactions: List<TransactionItem>,
+        label: String = "Ledger"
+    ): Boolean {
         return try {
-            val csvContent = generateCsv(transactions)
+            val csvContent = generateCsv(transactions, includeSummary = true)
             val exportDir = File(context.cacheDir, "exports")
             if (!exportDir.exists()) {
                 exportDir.mkdirs()
             }
 
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val file = File(exportDir, "sparrow_ledger_$timestamp.csv")
+            val safeLabel = label.lowercase().replace(" ", "_")
+            val file = File(exportDir, "sparrow_${safeLabel}_$timestamp.csv")
             file.writeText(csvContent)
 
             val uri = FileProvider.getUriForFile(
@@ -65,12 +93,12 @@ object CsvExportUtil {
 
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/csv"
-                putExtra(Intent.EXTRA_SUBJECT, "SPARROW Wallet Transaction Ledger ($timestamp)")
+                putExtra(Intent.EXTRA_SUBJECT, "SPW Wallet Financial $label ($timestamp)")
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            val chooser = Intent.createChooser(shareIntent, "Export Financial Ledger (CSV)")
+            val chooser = Intent.createChooser(shareIntent, "Export $label (CSV)")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
             true

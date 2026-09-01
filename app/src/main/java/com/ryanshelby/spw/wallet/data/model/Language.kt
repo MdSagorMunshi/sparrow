@@ -44,7 +44,22 @@ data class LocalizedStrings(
     val pushNotifications: String,
     val incomingTransferAlert: String,
     val backupSeed: String,
-    val swap: String
+    val swap: String,
+    val inflows: String = "Inflows",
+    val outflows: String = "Outflows",
+    val netFlow: String = "Net Flow",
+    val totalFees: String = "Fees Paid",
+    val allTime: String = "All Time",
+    val last24h: String = "24h",
+    val last7d: String = "7d",
+    val last30d: String = "30d",
+    val thisYear: String = "1y",
+    val exportLedger: String = "Export CSV",
+    val darkTheme: String = "Dark (Default)",
+    val lightTheme: String = "Light",
+    val oledTheme: String = "OLED Pure Black",
+    val nfcSettings: String = "NFC Settings",
+    val writeNfcTag: String = "Write NFC Tag"
 )
 
 object TranslationHelper {
@@ -80,7 +95,22 @@ object TranslationHelper {
                 pushNotifications = "Notificaciones Push",
                 incomingTransferAlert = "Alerta de Transferencia Entrante",
                 backupSeed = "Frase de Recuperación",
-                swap = "Canje"
+                swap = "Canje",
+                inflows = "Entradas",
+                outflows = "Salidas",
+                netFlow = "Flujo Neto",
+                totalFees = "Tarifas Pagadas",
+                allTime = "Todo",
+                last24h = "24h",
+                last7d = "7d",
+                last30d = "30d",
+                thisYear = "1a",
+                exportLedger = "Exportar CSV",
+                darkTheme = "Oscuro (Predeterminado)",
+                lightTheme = "Claro",
+                oledTheme = "OLED Negro Puro",
+                nfcSettings = "Ajustes NFC",
+                writeNfcTag = "Escribir Etiqueta NFC"
             )
             AppLanguage.CHINESE -> LocalizedStrings(
                 dashboard = "仪表盘",
@@ -112,7 +142,22 @@ object TranslationHelper {
                 pushNotifications = "即时推送通知",
                 incomingTransferAlert = "到账实时提醒",
                 backupSeed = "助记词备份",
-                swap = "快速兑换"
+                swap = "快速兑换",
+                inflows = "总流入 (接收)",
+                outflows = "总流出 (发送)",
+                netFlow = "净资金流",
+                totalFees = "已付矿工费",
+                allTime = "全部时间",
+                last24h = "24小时",
+                last7d = "7天",
+                last30d = "30天",
+                thisYear = "1年",
+                exportLedger = "导出账目 CSV",
+                darkTheme = "深色 (默认)",
+                lightTheme = "浅色",
+                oledTheme = "OLED 纯黑极夜",
+                nfcSettings = "NFC 设置",
+                writeNfcTag = "写入 NFC 标签"
             )
             AppLanguage.FRENCH -> LocalizedStrings(
                 dashboard = "Tableau",
@@ -144,7 +189,22 @@ object TranslationHelper {
                 pushNotifications = "Notifications Push",
                 incomingTransferAlert = "Alerte de virement entrant",
                 backupSeed = "Sauvegarde de la phrase",
-                swap = "Échanger"
+                swap = "Échanger",
+                inflows = "Entrées",
+                outflows = "Sorties",
+                netFlow = "Flux Net",
+                totalFees = "Frais Payés",
+                allTime = "Tout",
+                last24h = "24h",
+                last7d = "7j",
+                last30d = "30j",
+                thisYear = "1an",
+                exportLedger = "Exporter CSV",
+                darkTheme = "Sombre (Défaut)",
+                lightTheme = "Clair",
+                oledTheme = "OLED Noir Pur",
+                nfcSettings = "Paramètres NFC",
+                writeNfcTag = "Écrire Tag NFC"
             )
             AppLanguage.GERMAN -> LocalizedStrings(
                 dashboard = "Dashboard",
@@ -176,7 +236,22 @@ object TranslationHelper {
                 pushNotifications = "Push-Benachrichtigungen",
                 incomingTransferAlert = "Eingehende Überweisung",
                 backupSeed = "Seed-Phrase sichern",
-                swap = "Tauschen"
+                swap = "Tauschen",
+                inflows = "Zuflüsse",
+                outflows = "Abflüsse",
+                netFlow = "Nettofluss",
+                totalFees = "Gebühren",
+                allTime = "Gesamt",
+                last24h = "24h",
+                last7d = "7T",
+                last30d = "30T",
+                thisYear = "1J",
+                exportLedger = "CSV Exportieren",
+                darkTheme = "Dunkel (Standard)",
+                lightTheme = "Hell",
+                oledTheme = "OLED Reines Schwarz",
+                nfcSettings = "NFC-Einstellungen",
+                writeNfcTag = "NFC-Tag Schreiben"
             )
             AppLanguage.JAPANESE -> LocalizedStrings(
                 dashboard = "ダッシュボード",
@@ -208,7 +283,22 @@ object TranslationHelper {
                 pushNotifications = "プッシュ通知",
                 incomingTransferAlert = "着金リアルタイム通知",
                 backupSeed = "シードフレーズのバックアップ",
-                swap = "スワップ"
+                swap = "スワップ",
+                inflows = "受取総額",
+                outflows = "送金総額",
+                netFlow = "純収支",
+                totalFees = "手数料総額",
+                allTime = "全期間",
+                last24h = "24時間",
+                last7d = "7日間",
+                last30d = "30日間",
+                thisYear = "1年間",
+                exportLedger = "CSV出力",
+                darkTheme = "ダーク (標準)",
+                lightTheme = "ライト",
+                oledTheme = "OLED ピュアブラック",
+                nfcSettings = "NFC設定",
+                writeNfcTag = "NFCタグ書込"
             )
             AppLanguage.INDONESIAN -> LocalizedStrings(
                 dashboard = "Dasbor",
@@ -240,7 +330,22 @@ object TranslationHelper {
                 pushNotifications = "Notifikasi Push",
                 incomingTransferAlert = "Pemberitahuan Transfer Masuk",
                 backupSeed = "Cadangkan Frasa Pemulihan",
-                swap = "Tukar"
+                swap = "Tukar",
+                inflows = "Pemasukan",
+                outflows = "Pengeluaran",
+                netFlow = "Arus Bersih",
+                totalFees = "Total Biaya",
+                allTime = "Semua",
+                last24h = "24j",
+                last7d = "7h",
+                last30d = "30h",
+                thisYear = "1th",
+                exportLedger = "Ekspor CSV",
+                darkTheme = "Gelap (Default)",
+                lightTheme = "Terang",
+                oledTheme = "OLED Hitam Murni",
+                nfcSettings = "Pengaturan NFC",
+                writeNfcTag = "Tulis Tag NFC"
             )
             AppLanguage.RUSSIAN -> LocalizedStrings(
                 dashboard = "Главная",
@@ -272,7 +377,22 @@ object TranslationHelper {
                 pushNotifications = "Push-уведомления",
                 incomingTransferAlert = "Входящий перевод",
                 backupSeed = "Резервная копия фразы",
-                swap = "Обмен"
+                swap = "Обмен",
+                inflows = "Поступления",
+                outflows = "Списания",
+                netFlow = "Чистый поток",
+                totalFees = "Комиссии",
+                allTime = "Все время",
+                last24h = "24ч",
+                last7d = "7д",
+                last30d = "30д",
+                thisYear = "1г",
+                exportLedger = "Экспорт CSV",
+                darkTheme = "Тёмная (По умолч.)",
+                lightTheme = "Светлая",
+                oledTheme = "OLED Чистый чёрный",
+                nfcSettings = "Настройки NFC",
+                writeNfcTag = "Запись NFC метки"
             )
             AppLanguage.HINDI -> LocalizedStrings(
                 dashboard = "डैशबोर्ड",
@@ -304,7 +424,22 @@ object TranslationHelper {
                 pushNotifications = "पुश सूचनाएं",
                 incomingTransferAlert = "आवक स्थानांतरण सूचना",
                 backupSeed = "रिकवरी वाक्यांश बैकअप",
-                swap = "अदला-बदली"
+                swap = "अदला-बदली",
+                inflows = "कुल आमद",
+                outflows = "कुल खर्च",
+                netFlow = "शुद्ध प्रवाह",
+                totalFees = "कुल शुल्क",
+                allTime = "सभी",
+                last24h = "24 घंटे",
+                last7d = "7 दिन",
+                last30d = "30 दिन",
+                thisYear = "1 वर्ष",
+                exportLedger = "CSV निर्यात",
+                darkTheme = "डार्क (डिफ़ॉल्ट)",
+                lightTheme = "लाइट",
+                oledTheme = "OLED शुद्ध काला",
+                nfcSettings = "NFC सेटिंग्स",
+                writeNfcTag = "NFC टैग लिखें"
             )
             AppLanguage.ARABIC -> LocalizedStrings(
                 dashboard = "لوحة القيادة",
@@ -336,7 +471,22 @@ object TranslationHelper {
                 pushNotifications = "إشعارات فورية",
                 incomingTransferAlert = "تنبيه تحويل وارد",
                 backupSeed = "نسخ العبارة الاحتياطية",
-                swap = "تبديل"
+                swap = "تبديل",
+                inflows = "المقبوضات",
+                outflows = "المدفوعات",
+                netFlow = "صافي التدفق",
+                totalFees = "إجمالي الرسوم",
+                allTime = "الكل",
+                last24h = "24 ساعة",
+                last7d = "7 أيام",
+                last30d = "30 يوم",
+                thisYear = "سنة",
+                exportLedger = "تصدير CSV",
+                darkTheme = "داكن (افتراضي)",
+                lightTheme = "فاتح",
+                oledTheme = "OLED أسود خالص",
+                nfcSettings = "إعدادات NFC",
+                writeNfcTag = "كتابة علامة NFC"
             )
             AppLanguage.BANGLA -> LocalizedStrings(
                 dashboard = "ড্যাশবোর্ড",
@@ -368,7 +518,22 @@ object TranslationHelper {
                 pushNotifications = "পুশ নোটিফিকেশন",
                 incomingTransferAlert = "আগত ট্রান্সফার সতর্কতা",
                 backupSeed = "ব্যাকআপ সিড ফ্রেজ",
-                swap = "অদলবদল"
+                swap = "অদলবদল",
+                inflows = "মোট আগমন",
+                outflows = "মোট বহির্গমন",
+                netFlow = "নিট ব্যালেন্স",
+                totalFees = "প্রদত্ত ফি",
+                allTime = "সর্বকালীন",
+                last24h = "২৪ ঘণ্টা",
+                last7d = "৭ দিন",
+                last30d = "৩০ দিন",
+                thisYear = "১ বছর",
+                exportLedger = "CSV এক্সপোর্ট",
+                darkTheme = "ডার্ক (ডিফল্ট)",
+                lightTheme = "লাইট",
+                oledTheme = "OLED পিওর ব্ল্যাক",
+                nfcSettings = "NFC সেটিংস",
+                writeNfcTag = "NFC ট্যাগ রাইট"
             )
             else -> LocalizedStrings(
                 dashboard = "Dashboard",
@@ -400,7 +565,22 @@ object TranslationHelper {
                 pushNotifications = "Push Notifications",
                 incomingTransferAlert = "Incoming Transfer Alert",
                 backupSeed = "Backup Secret Phrase",
-                swap = "Instant Swap"
+                swap = "Instant Swap",
+                inflows = "Inflows",
+                outflows = "Outflows",
+                netFlow = "Net Flow",
+                totalFees = "Fees Paid",
+                allTime = "All Time",
+                last24h = "24h",
+                last7d = "7d",
+                last30d = "30d",
+                thisYear = "1y",
+                exportLedger = "Export CSV",
+                darkTheme = "Dark (Default)",
+                lightTheme = "Light",
+                oledTheme = "OLED Pure Black",
+                nfcSettings = "NFC Settings",
+                writeNfcTag = "Write NFC Tag"
             )
         }
     }

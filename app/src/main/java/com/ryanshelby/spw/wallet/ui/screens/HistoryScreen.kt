@@ -1,8 +1,11 @@
 package com.ryanshelby.spw.wallet.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,18 +30,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.filled.Send
-import android.widget.Toast
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +64,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ryanshelby.spw.wallet.data.model.AppLanguage
@@ -59,6 +73,7 @@ import com.ryanshelby.spw.wallet.data.model.NetworkConfig
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
 import com.ryanshelby.spw.wallet.data.model.TransactionStatus
 import com.ryanshelby.spw.wallet.data.model.TransactionType
+import com.ryanshelby.spw.wallet.data.model.TranslationHelper
 import com.ryanshelby.spw.wallet.security.CsvExportUtil
 import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.ui.components.FinanceCard
@@ -69,6 +84,10 @@ import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
 import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
 import com.ryanshelby.spw.wallet.ui.theme.BorderStrong
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
+import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
+import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
+import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
+import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
 import com.ryanshelby.spw.wallet.ui.theme.SemanticError
 import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
@@ -86,6 +105,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class TimeframeOption(val id: String, val seconds: Long) {
+    ALL("ALL", 0L),
+    DAY("24H", 86400L),
+    WEEK("7D", 7 * 86400L),
+    MONTH("30D", 30 * 86400L),
+    YEAR("1Y", 365 * 86400L)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     transactions: List<TransactionItem>,
@@ -95,24 +123,36 @@ fun HistoryScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val strings = remember(activeLanguage) { TranslationHelper.getStrings(activeLanguage) }
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault()) }
 
-    var selectedFilter by remember { mutableStateOf("ALL") }
+    var selectedTimeframe by remember { mutableStateOf(TimeframeOption.ALL) }
+    var selectedTypeFilter by remember { mutableStateOf("ALL") }
     var searchQuery by remember { mutableStateOf("") }
+    var showAnalytics by remember { mutableStateOf(true) }
+    var showExportSheet by remember { mutableStateOf(false) }
     var selectedTxForDetails by remember { mutableStateOf<TransactionItem?>(null) }
     var isFilterTransitioning by remember { mutableStateOf(false) }
 
-    val filterOptions = listOf("ALL", "RECEIVED", "SENT", "STEALTH")
+    val typeFilterOptions = listOf("ALL", "RECEIVED", "SENT", "STEALTH")
 
-    LaunchedEffect(selectedFilter) {
+    LaunchedEffect(selectedTimeframe, selectedTypeFilter) {
         isFilterTransitioning = true
-        delay(120)
+        delay(80)
         isFilterTransitioning = false
     }
 
-    val filteredTransactions = remember(transactions, selectedFilter, searchQuery) {
+    val nowSec = remember { System.currentTimeMillis() / 1000L }
+
+    // Filter transactions by timeframe, type, and search query
+    val filteredTransactions = remember(transactions, selectedTimeframe, selectedTypeFilter, searchQuery) {
         transactions.filter { tx ->
-            val matchesFilter = when (selectedFilter) {
+            val matchesTime = if (selectedTimeframe.seconds == 0L) true else {
+                val txSec = if (tx.timestamp > 1000000000000L) tx.timestamp / 1000L else tx.timestamp
+                txSec >= (nowSec - selectedTimeframe.seconds)
+            }
+
+            val matchesType = when (selectedTypeFilter) {
                 "SENT" -> tx.type == TransactionType.SEND
                 "RECEIVED" -> tx.type == TransactionType.RECEIVE
                 "STEALTH" -> tx.type == TransactionType.STEALTH
@@ -123,12 +163,27 @@ fun HistoryScreen(
                 tx.txHash.contains(searchQuery, ignoreCase = true) ||
                 tx.toAddress.contains(searchQuery, ignoreCase = true) ||
                 tx.fromAddress.contains(searchQuery, ignoreCase = true) ||
-                tx.memo.contains(searchQuery, ignoreCase = true)
+                tx.memo.contains(searchQuery, ignoreCase = true) ||
+                tx.amountSpw.toString().contains(searchQuery)
             }
 
-            matchesFilter && matchesSearch
+            matchesTime && matchesType && matchesSearch
         }
     }
+
+    // Compute Financial Telemetry Metrics over active filtered list
+    val totalInflow = remember(filteredTransactions) {
+        filteredTransactions.filter { it.type == TransactionType.RECEIVE }.sumOf { it.amountSpw }
+    }
+    val totalOutflow = remember(filteredTransactions) {
+        filteredTransactions.filter { it.type == TransactionType.SEND || it.type == TransactionType.STEALTH }.sumOf { it.amountSpw }
+    }
+    val totalFeesPaid = remember(filteredTransactions) {
+        filteredTransactions.sumOf { it.feeSpw }
+    }
+    val netFlow = totalInflow - totalOutflow
+    val totalVolume = totalInflow + totalOutflow
+    val inflowRatio = if (totalVolume > 0) (totalInflow / totalVolume).toFloat() else 0.5f
 
     Box(
         modifier = Modifier
@@ -142,7 +197,7 @@ fun HistoryScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Header
+            // ── Header ──────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -169,21 +224,19 @@ fun HistoryScreen(
 
                 Spacer(modifier = Modifier.width(14.dp))
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Transaction History",
+                        text = strings.history,
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "${network.name} Ledger",
+                        text = "${network.name} Ledger • ${filteredTransactions.size} records",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
 
                 // Export CSV Ledger Button
                 Box(
@@ -197,10 +250,7 @@ fun HistoryScreen(
                             if (transactions.isEmpty()) {
                                 Toast.makeText(context, "No transactions to export", Toast.LENGTH_SHORT).show()
                             } else {
-                                val ok = CsvExportUtil.exportAndShareCsv(context, transactions)
-                                if (!ok) {
-                                    Toast.makeText(context, "Failed to export CSV", Toast.LENGTH_SHORT).show()
-                                }
+                                showExportSheet = true
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -214,16 +264,193 @@ fun HistoryScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Search input
+            // ── Financial Telemetry Card ────────────────────────
+            FinanceCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                HapticUtil.lightTap(context)
+                                showAnalytics = !showAnalytics
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Analytics, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "PORTFOLIO LEDGER TELEMETRY",
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        Icon(
+                            imageVector = if (showAnalytics) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = "Toggle",
+                            tint = TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = showAnalytics,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(top = 12.dp)) {
+                            // 4 Metrics Grid
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Inflow
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(SurfaceSubtle)
+                                        .padding(10.dp)
+                                ) {
+                                    Column {
+                                        Text(strings.inflows, color = TextSecondary, fontSize = 10.sp)
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = "+${String.format(Locale.US, "%.4f", totalInflow)}",
+                                            color = SemanticPositive,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                // Outflow
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(SurfaceSubtle)
+                                        .padding(10.dp)
+                                ) {
+                                    Column {
+                                        Text(strings.outflows, color = TextSecondary, fontSize = 10.sp)
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = "-${String.format(Locale.US, "%.4f", totalOutflow)}",
+                                            color = TextPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Net Flow
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(SurfaceSubtle)
+                                        .padding(10.dp)
+                                ) {
+                                    Column {
+                                        Text(strings.netFlow, color = TextSecondary, fontSize = 10.sp)
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = (if (netFlow >= 0) "+" else "") + String.format(Locale.US, "%.4f", netFlow),
+                                            color = if (netFlow >= 0) SemanticPositive else SemanticError,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                // Fees
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(SurfaceSubtle)
+                                        .padding(10.dp)
+                                ) {
+                                    Column {
+                                        Text(strings.totalFees, color = TextSecondary, fontSize = 10.sp)
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = "${String.format(Locale.US, "%.4f", totalFeesPaid)} SPW",
+                                            color = SemanticWarning,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Volume Ratio Bar
+                            if (totalVolume > 0) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(CircleShape)
+                                        .background(SurfaceSubtle)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(inflowRatio.coerceIn(0.01f, 0.99f))
+                                            .fillMaxSize()
+                                            .background(SemanticPositive)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .weight((1f - inflowRatio).coerceIn(0.01f, 0.99f))
+                                            .fillMaxSize()
+                                            .background(CyanNeon)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ── Search Input ────────────────────────────────────
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search by TXID, address, or memo", color = TextMuted, fontSize = 13.sp) },
+                placeholder = { Text("Search TXID, address, memo or amount", color = TextMuted, fontSize = 12.sp) },
                 singleLine = true,
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
                 },
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
@@ -244,54 +471,91 @@ fun HistoryScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Filter Chips
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            // ── Timeframe & Type Filter Chips ───────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(filterOptions) { filter ->
-                    val isSelected = selectedFilter == filter
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) SurfaceElevated else SurfacePrimary)
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) BorderStrong else BorderSubtle,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .bouncyClickable {
-                                HapticUtil.lightTap(context)
-                                selectedFilter = filter
-                            }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (isSelected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(CircleShape)
-                                        .background(TextPrimary)
+                // Timeframe Chips
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(TimeframeOption.entries.toTypedArray()) { tf ->
+                        val isSelected = selectedTimeframe == tf
+                        val label = when (tf) {
+                            TimeframeOption.ALL -> strings.allTime
+                            TimeframeOption.DAY -> strings.last24h
+                            TimeframeOption.WEEK -> strings.last7d
+                            TimeframeOption.MONTH -> strings.last30d
+                            TimeframeOption.YEAR -> strings.thisYear
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) SurfaceElevated else SurfacePrimary)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) BorderStrong else BorderSubtle,
+                                    shape = RoundedCornerShape(8.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                            }
+                                .bouncyClickable {
+                                    HapticUtil.lightTap(context)
+                                    selectedTimeframe = tf
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
                             Text(
-                                text = filter,
+                                text = label,
                                 color = if (isSelected) TextPrimary else TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Transactions list or loading skeleton
+            // Type Filter Chips
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(typeFilterOptions) { filter ->
+                    val isSelected = selectedTypeFilter == filter
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSelected) SurfaceElevated else SurfacePrimary)
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) BorderStrong else BorderSubtle,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                selectedTypeFilter = filter
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = filter,
+                            color = if (isSelected) CyanNeon else TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ── Transactions List ───────────────────────────────
             if (isFilterTransitioning) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     TransactionRowSkeleton()
@@ -301,52 +565,34 @@ fun HistoryScreen(
             } else if (filteredTransactions.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    FinanceCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(SurfaceSubtle),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.History,
-                                    contentDescription = null,
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Text(
-                                text = "No transactions found",
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = if (searchQuery.isNotBlank()) "No records match your search criteria." else "There are no confirmed transactions in this filter.",
-                                color = TextMuted,
-                                fontSize = 12.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = if (searchQuery.isNotBlank() || selectedTypeFilter != "ALL" || selectedTimeframe != TimeframeOption.ALL) {
+                                "No transactions match your active filters"
+                            } else {
+                                "No transaction history yet"
+                            },
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     itemsIndexed(filteredTransactions) { index, tx ->
                         val isIncoming = when (tx.type) {
@@ -361,78 +607,88 @@ fun HistoryScreen(
                             }
                         }
                         val isStealth = tx.type == TransactionType.STEALTH
-                        val amountColor = if (isIncoming) SemanticPositive else SemanticError
-                        val iconColor = if (isIncoming) SemanticPositive else SemanticError
+                        val accentColor = if (isIncoming) SemanticPositive else SemanticError
 
                         FinanceCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .staggeredEntrance(index, baseDelayMs = 30),
-                            onClick = {
-                                HapticUtil.lightTap(context)
-                                selectedTxForDetails = tx
-                            }
+                                .staggeredEntrance(index)
+                                .bouncyClickable {
+                                    HapticUtil.lightTap(context)
+                                    selectedTxForDetails = tx
+                                }
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    // Identicon with action badge overlay
-                                    Box(modifier = Modifier.size(40.dp)) {
-                                        Identicon(
-                                            address = if (isIncoming) tx.fromAddress else tx.toAddress,
-                                            size = 40.dp,
-                                            shape = RoundedCornerShape(10.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(SurfaceSubtle),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = when {
+                                                isStealth -> Icons.Default.Shield
+                                                isIncoming -> Icons.AutoMirrored.Filled.CallReceived
+                                                else -> Icons.AutoMirrored.Filled.Send
+                                            },
+                                            contentDescription = null,
+                                            tint = accentColor,
+                                            modifier = Modifier.size(16.dp)
                                         )
-                                        Box(
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .align(Alignment.BottomEnd)
-                                                .clip(CircleShape)
-                                                .background(SurfacePrimary)
-                                                .border(0.8.dp, BorderSubtle, CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = when {
-                                                    isStealth -> Icons.Default.Shield
-                                                    isIncoming -> Icons.AutoMirrored.Filled.CallReceived
-                                                    else -> Icons.AutoMirrored.Filled.Send
-                                                },
-                                                contentDescription = null,
-                                                tint = iconColor,
-                                                modifier = Modifier.size(10.dp)
-                                            )
-                                        }
                                     }
 
                                     Spacer(modifier = Modifier.width(12.dp))
 
                                     Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = when {
+                                                    isStealth -> "Stealth Transfer"
+                                                    isIncoming -> "Received"
+                                                    else -> "Sent"
+                                                },
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 13.sp
+                                            )
+                                            if (tx.status != TransactionStatus.CONFIRMED) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "(${tx.status.name})",
+                                                    color = when (tx.status) {
+                                                        TransactionStatus.PENDING -> SemanticWarning
+                                                        TransactionStatus.FAILED -> SemanticError
+                                                        else -> TextMuted
+                                                    },
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+
+                                        val counterparty = if (isIncoming) tx.fromAddress else tx.toAddress
                                         Text(
-                                            text = when {
-                                                isStealth -> if (isIncoming) "Stealth Received" else "Stealth Sent"
-                                                isIncoming -> "Received SPW"
-                                                else -> "Sent SPW"
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = if (tx.txHash.length > 14) "${tx.txHash.take(6)}...${tx.txHash.takeLast(6)}" else tx.txHash,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            text = if (counterparty.isNotBlank()) counterparty.take(8) + "..." + counterparty.takeLast(6) else "On-Chain",
                                             color = TextSecondary,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 11.sp
+                                            fontSize = 11.sp,
+                                            fontFamily = FontFamily.Monospace
                                         )
+
                                         Text(
-                                            text = dateFormatter.format(Date(tx.timestamp)),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            text = dateFormatter.format(Date(if (tx.timestamp > 1000000000000L) tx.timestamp else tx.timestamp * 1000L)),
                                             color = TextMuted,
                                             fontSize = 10.sp
                                         )
@@ -441,35 +697,117 @@ fun HistoryScreen(
 
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = (if (isIncoming) "+" else "-") + String.format(Locale.US, "%.8f", tx.amountSpw).trimEnd('0').let { if (it.endsWith('.')) "${it}00" else it } + " SPW",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = amountColor,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontFamily = FontFamily.SansSerif
+                                        text = (if (isIncoming) "+" else "-") + String.format(Locale.US, "%.4f", tx.amountSpw) + " ${tx.tokenSymbol}",
+                                        color = accentColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        fontFamily = FontFamily.Monospace
                                     )
-                                    Text(
-                                        text = tx.status.name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (tx.status == TransactionStatus.CONFIRMED) SemanticPositive else SemanticWarning,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    if (tx.feeSpw > 0) {
+                                        Text(
+                                            text = "Fee: ${String.format(Locale.US, "%.4f", tx.feeSpw)}",
+                                            color = TextMuted,
+                                            fontSize = 10.sp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(30.dp)) }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
             }
         }
+    }
 
-        // Transaction Details Dialog
-        selectedTxForDetails?.let { tx ->
-            TransactionDetailDialog(
-                tx = tx,
-                walletAddress = walletAddress,
-                onDismiss = { selectedTxForDetails = null }
-            )
+    // ── Export CSV ModalBottomSheet ─────────────────────────────
+    if (showExportSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showExportSheet = false },
+            sheetState = sheetState,
+            containerColor = DarkBackground,
+            dragHandle = null,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "EXPORT ACCOUNTING LEDGER",
+                        color = TextMuted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+                    IconButton(onClick = { showExportSheet = false }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Option 1: Filtered Export
+                Button(
+                    onClick = {
+                        showExportSheet = false
+                        CsvExportUtil.exportAndShareCsv(context, filteredTransactions, label = "Filtered_${selectedTimeframe.id}")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ButtonPrimary, contentColor = ButtonPrimaryText),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Export Filtered View (${filteredTransactions.size} txs)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Option 2: Full Ledger Export
+                OutlinedButton(
+                    onClick = {
+                        showExportSheet = false
+                        CsvExportUtil.exportAndShareCsv(context, transactions, label = "Full_Ledger")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Export Full Ledger (${transactions.size} txs)",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
+    }
+
+    // ── Transaction Details Dialog ──────────────────────────────
+    if (selectedTxForDetails != null) {
+        TransactionDetailDialog(
+            tx = selectedTxForDetails!!,
+            walletAddress = walletAddress,
+            onDismiss = { selectedTxForDetails = null }
+        )
     }
 }
