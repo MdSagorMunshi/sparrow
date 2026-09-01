@@ -618,14 +618,19 @@ class WalletRepository(
             )
         }
 
-        // Handle Stealth / Standard Outputs
+        // Handle Stealth / Standard Outputs (Auto-resolves BIP-47 Paynyms)
+        val paynym = SPWCrypto.parsePaynymCode(toAddress)
+        val targetSpendPub = paynym?.spendPubHex ?: toAddress
+        val targetViewPub = paynym?.viewPubHex ?: recipientViewPubHex
+        val effectiveIsStealth = isStealth || (paynym != null)
+
         val outputs = mutableListOf<com.ryanshelby.spw.wallet.security.TxOutputData>()
         var txPubkeyHex = ""
 
-        if (isStealth && recipientViewPubHex != null && recipientViewPubHex.isNotBlank()) {
+        if (effectiveIsStealth && targetViewPub != null && targetViewPub.isNotBlank()) {
             val stealthOutput = SPWCrypto.makeStealthOutput(
-                recipientSpendPubHex = toAddress,
-                recipientViewPubHex = recipientViewPubHex
+                recipientSpendPubHex = targetSpendPub,
+                recipientViewPubHex = targetViewPub
             )
             outputs.add(com.ryanshelby.spw.wallet.security.TxOutputData(address = stealthOutput.oneTimeAddress, amount = amountFeathers))
             txPubkeyHex = stealthOutput.txPubkeyHex

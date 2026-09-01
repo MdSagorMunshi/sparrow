@@ -507,6 +507,86 @@ object SPWCrypto {
         return bigIntTo32Bytes(oneTimeInt).toHex()
     }
 
+    // ── BIP-47 Reusable Payment Codes (Sparrow Paynyms) ───────────────────
+
+    data class PaynymInfo(
+        val code: String,
+        val alias: String,
+        val spendPubHex: String,
+        val viewPubHex: String
+    )
+
+    const val PAYNYM_VERSION: Byte = 0x47 // BIP-47 version identifier
+
+    fun generatePaynymCode(spendPubHex: String, viewPubHex: String): String {
+        val spendBytes = hexToBytes(spendPubHex.trim())
+        val viewBytes = hexToBytes(viewPubHex.trim())
+        require(spendBytes.size == 33 && viewBytes.size == 33) { "Spend and view public keys must be 33-byte compressed EC points" }
+
+        // [Version: 1B (0x47)] + [Features: 1B (0x00)] + [SpendPub: 33B] + [ViewPub: 33B] + [ChainID: 2B (0x07, 0x86)]
+        val payload = ByteArray(70)
+        payload[0] = PAYNYM_VERSION
+        payload[1] = 0x00 // Bitfield features
+        System.arraycopy(spendBytes, 0, payload, 2, 33)
+        System.arraycopy(viewBytes, 0, payload, 35, 33)
+        payload[68] = 0x07 // SPW 1926 high byte
+        payload[69] = 0x86.toByte() // SPW 1926 low byte
+
+        val checksum = dsha256(payload).copyOfRange(0, 4)
+        val full = ByteArray(74)
+        System.arraycopy(payload, 0, full, 0, 70)
+        System.arraycopy(checksum, 0, full, 70, 4)
+
+        return "PM8T" + b58Encode(full)
+    }
+
+    fun parsePaynymCode(rawInput: String): PaynymInfo? {
+        return try {
+            var clean = rawInput.trim()
+            if (clean.startsWith("spw:", ignoreCase = true)) {
+                clean = clean.substring(4)
+            }
+            if (clean.startsWith("paynym:", ignoreCase = true)) {
+                clean = clean.substring(7)
+            }
+            if (clean.contains("?")) {
+                clean = clean.substringBefore("?")
+            }
+            if (!clean.startsWith("PM8T")) return null
+
+            val b58Payload = clean.substring(4)
+            val raw = b58Decode(b58Payload)
+            if (raw.size != 74) return null
+            if (raw[0] != PAYNYM_VERSION) return null
+
+            val payload = raw.copyOfRange(0, 70)
+            val checksum = raw.copyOfRange(70, 74)
+            val expected = dsha256(payload).copyOfRange(0, 4)
+            if (!checksum.contentEquals(expected)) return null
+
+            val spendPub = raw.copyOfRange(2, 35).toHex()
+            val viewPub = raw.copyOfRange(35, 68).toHex()
+            val alias = generatePaynymAlias(spendPub)
+
+            PaynymInfo(
+                code = clean,
+                alias = alias,
+                spendPubHex = spendPub,
+                viewPubHex = viewPub
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun isPaynymCode(input: String): Boolean = parsePaynymCode(input) != null
+
+    fun generatePaynymAlias(spendPubHex: String): String {
+        val hash = sha256Hex(spendPubHex)
+        val shortId = hash.take(6)
+        return "+sparrow/$shortId"
+    }
+
     // ── SPW Connect Sign-In Protocol ───────────────────────────────────────
 
     fun signConnectMessage(app: String, address: String, nonce: String, spendKeyHex: String): String {

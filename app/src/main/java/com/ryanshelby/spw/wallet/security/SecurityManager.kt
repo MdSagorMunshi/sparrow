@@ -382,6 +382,25 @@ class SecurityManager(private val context: Context) {
         return ""
     }
 
+    fun getPaynymCode(): String {
+        val spendPub = getSpendPubHex()
+        val viewPub = getViewPubHex()
+        if (spendPub.isNotBlank() && viewPub.isNotBlank()) {
+            return try {
+                SPWCrypto.generatePaynymCode(spendPub, viewPub)
+            } catch (e: Exception) { "" }
+        }
+        return ""
+    }
+
+    fun getPaynymAlias(): String {
+        val spendPub = getSpendPubHex()
+        if (spendPub.isNotBlank()) {
+            return SPWCrypto.generatePaynymAlias(spendPub)
+        }
+        return "+sparrow"
+    }
+
     fun getWalletName(): String = prefs.getString(KEY_WALLET_NAME, "Main Sparrow Account") ?: "Main Sparrow Account"
 
     fun setWalletName(name: String) {

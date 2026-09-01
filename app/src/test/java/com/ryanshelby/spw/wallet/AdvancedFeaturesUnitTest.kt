@@ -68,4 +68,67 @@ class AdvancedFeaturesUnitTest {
         assertFalse(SPWCrypto.isValidSpwAddress("InvalidAddress123"))
         assertFalse(SPWCrypto.isValidSpwAddress(""))
     }
+
+    @Test
+    fun testBip47Paynym_GenerationAndParsing() {
+        val mnemonic = SPWCrypto.generateMnemonic(128)
+        val acc = SPWCrypto.createAccountFromMnemonic(mnemonic)
+
+        // 1. Generate BIP-47 Paynym code
+        val paynymCode = SPWCrypto.generatePaynymCode(acc.spendPubHex, acc.viewPubHex)
+        assertTrue(paynymCode.startsWith("PM8T"))
+        assertTrue(SPWCrypto.isPaynymCode(paynymCode))
+
+        // 2. Parse BIP-47 Paynym code
+        val parsed = SPWCrypto.parsePaynymCode(paynymCode)
+        assertNotNull(parsed)
+        assertEquals(acc.spendPubHex.lowercase(), parsed!!.spendPubHex.lowercase())
+        assertEquals(acc.viewPubHex.lowercase(), parsed.viewPubHex.lowercase())
+        assertTrue(parsed.alias.startsWith("+sparrow/"))
+
+        // 3. Test with URI scheme prefix
+        val uriParsed = SPWCrypto.parsePaynymCode("paynym:$paynymCode?label=Alice")
+        assertNotNull(uriParsed)
+        assertEquals(acc.spendPubHex.lowercase(), uriParsed!!.spendPubHex.lowercase())
+
+        // 4. Test invalid paynym codes
+        assertFalse(SPWCrypto.isPaynymCode("PM8TInvalidPayload12345"))
+        assertFalse(SPWCrypto.isPaynymCode("DAdg5ZAM8pa8sw1YccFp95mU8szyGJ5C95"))
+    }
+
+    @Test
+    fun testBip47Paynym_StealthOutputRoundtrip() {
+        // Bob's Paynym
+        val bobMnemonic = SPWCrypto.generateMnemonic(128)
+        val bobKeys = SPWCrypto.createAccountFromMnemonic(bobMnemonic)
+        val bobPaynym = SPWCrypto.generatePaynymCode(bobKeys.spendPubHex, bobKeys.viewPubHex)
+
+        // Alice receives Bob's Paynym code and creates a stealth output
+        val parsedPaynym = SPWCrypto.parsePaynymCode(bobPaynym)
+        assertNotNull(parsedPaynym)
+
+        val stealthOutput = SPWCrypto.makeStealthOutput(parsedPaynym!!.spendPubHex, parsedPaynym.viewPubHex)
+        assertTrue(SPWCrypto.isValidSpwAddress(stealthOutput.oneTimeAddress))
+        assertNotNull(stealthOutput.txPubkeyHex)
+
+        // Bob scans the blockchain and discovers the stealth payment meant for him
+        val isForBob = SPWCrypto.scanStealthOutput(
+            outputAddress = stealthOutput.oneTimeAddress,
+            txPubkeyHex = stealthOutput.txPubkeyHex,
+            viewKeyHex = bobKeys.viewKeyHex,
+            spendPubHex = bobKeys.spendPubHex
+        )
+        assertTrue(isForBob)
+
+        // Bob derives the one-time private key to spend the UTXO
+        val oneTimePrivKeyHex = SPWCrypto.deriveStealthPrivKey(
+            txPubkeyHex = stealthOutput.txPubkeyHex,
+            viewKeyHex = bobKeys.viewKeyHex,
+            spendKeyHex = bobKeys.spendKeyHex
+        )
+        val derivedSpendPub = SPWCrypto.getCompressedPublicKey(SPWCrypto.hexToBytes(oneTimePrivKeyHex))
+        val derivedAddress = SPWCrypto.pubkeyToAddress(derivedSpendPub)
+
+        assertEquals(stealthOutput.oneTimeAddress, derivedAddress)
+    }
 }

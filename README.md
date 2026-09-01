@@ -33,6 +33,7 @@ Sparrow provides an institutional-grade, privacy-preserving mobile wallet and de
 *   **💼 Multi-Wallet & Account Management**: Dedicated wallet hub with 1-tap account switching, custom labels, 12 vs 24-word BIP-39 mnemonic creation, multi-tab imports, and PIN/Biometrics-guarded safe deletion.
 *   **📄 Bank-Grade PDF & CSV Financial Statements**: Generate and export publication-ready financial statements and CSV accounting ledgers with custom date ranges, year filters, and transaction type breakdowns.
 *   **🕵️ Dual-Key ECDSA/ECDH Stealth Transfers**: Cryptographic one-time address shielding for total privacy. Send funds to private recipient stealth addresses without revealing identity on-chain.
+*   **🏷️ BIP-47 Reusable Payment Codes (Sparrow Paynyms)**: Static permanent payment handle (`PM8T...` and alias `+sparrow/id`) that can be shared publicly without leaking on-chain balances or transaction history, generating unique unlinkable stealth addresses for every payment.
 *   **📲 NFC Tap-to-Pay & Card Provisioning**: Contactless Phone-to-Phone SPW payments powered by ephemeral secp256r1 ECDH key exchange with AES-GCM encryption and anti-replay protection.
 *   **📴 Offline Balance Caching & Live Sync**: Instant offline balance display with connectivity status banner, auto-updating in the background whenever live internet is detected.
 *   **🎯 Strict Financial Input Validation**: Strict numeric and decimal sanitization across all transfer and receive amount fields with dedicated decimal keypads.

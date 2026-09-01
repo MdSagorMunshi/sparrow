@@ -17,6 +17,11 @@
   - Single-use ephemeral stealth payment generator with dedicated QR code view.
   - Configurable expiration timer (15 Mins, 1 Hour, 24 Hours) with real-time countdown ticker.
   - Active blockchain watcher polling node for settlement and presenting instant celebratory confirmation upon receipt.
+- **🏷️ BIP-47 Reusable Payment Codes (Sparrow Paynyms)**:
+  - Permanent public payment handle (`PM8T...` and alias `+sparrow/id`) that can be shared publicly without linking on-chain payments or revealing wallet balances.
+  - Automatically derives unique, unlinkable one-time stealth addresses on the SPW blockchain for every incoming and outgoing transaction.
+  - Interactive Receive Mode switcher on `ReceiveScreen` toggling between Standard Base58 Address and high-contrast Paynym QR code.
+  - Automatic Paynym detection on `SendTransferScreen` with purple Paynym recognition pill and transparent stealth output construction.
 - **📱 Android Home Screen Glance AppWidget**:
   - Glanceable home screen widget showing live portfolio balance and node status badge.
   - Quick Send shortcut and 1-tap mobile node mining trigger.

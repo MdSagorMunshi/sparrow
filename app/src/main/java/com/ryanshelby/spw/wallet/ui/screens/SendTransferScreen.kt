@@ -96,6 +96,7 @@ import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
 import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.PurpleNeon
 import com.ryanshelby.spw.wallet.ui.theme.SemanticError
 import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
 import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
@@ -247,14 +248,19 @@ fun SendTransferScreen(
     val amountValue = amountText.toDoubleOrNull() ?: 0.0
     val amountFeathers = (amountValue * SPWCrypto.FEATHERS_PER_SPW).toLong()
 
-    // Address & Self-Send Validation
+    // Address, Paynym & Self-Send Validation
+    val paynymInfo = remember(recipientAddress) {
+        SPWCrypto.parsePaynymCode(recipientAddress)
+    }
+
     val isSelfSend = remember(recipientAddress, walletAddress) {
         recipientAddress.isNotBlank() && walletAddress.isNotBlank() &&
                 recipientAddress.trim().equals(walletAddress.trim(), ignoreCase = true)
     }
 
-    val isAddressValidFormat = remember(recipientAddress, isStealthTransfer) {
+    val isAddressValidFormat = remember(recipientAddress, isStealthTransfer, paynymInfo) {
         if (recipientAddress.isBlank()) true
+        else if (paynymInfo != null) true
         else if (isStealthTransfer) {
             val clean = recipientAddress.trim()
             clean.length == 66 && (clean.startsWith("02") || clean.startsWith("03")) &&
@@ -264,8 +270,9 @@ fun SendTransferScreen(
         }
     }
 
-    val isStealthViewKeyValid = remember(recipientViewPub, isStealthTransfer) {
-        if (!isStealthTransfer || recipientViewPub.isBlank()) true
+    val isStealthViewKeyValid = remember(recipientViewPub, isStealthTransfer, paynymInfo) {
+        if (paynymInfo != null) true
+        else if (!isStealthTransfer || recipientViewPub.isBlank()) true
         else {
             val clean = recipientViewPub.trim()
             clean.length == 66 && (clean.startsWith("02") || clean.startsWith("03")) &&
@@ -276,6 +283,7 @@ fun SendTransferScreen(
     val addressErrorMessage = when {
         recipientAddress.isBlank() -> null
         isSelfSend -> "Cannot send tokens to your own wallet address."
+        paynymInfo != null -> null
         !isAddressValidFormat -> if (isStealthTransfer) {
             "Invalid Spend Public Key (must be 66-character compressed hex starting with 02 or 03)."
         } else {
@@ -581,6 +589,30 @@ fun SendTransferScreen(
                         fontWeight = FontWeight.Medium,
                         lineHeight = 15.sp
                     )
+                }
+            }
+
+            if (paynymInfo != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(PurpleNeon.copy(alpha = 0.12f))
+                        .border(1.dp, PurpleNeon.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Shield, contentDescription = null, tint = PurpleNeon, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Sparrow Paynym Reusable Code", color = PurpleNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${paynymInfo.alias} • Ephemeral Dual-Key Stealth Active",
+                            color = TextSecondary,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
 
