@@ -21,9 +21,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.WifiOff
@@ -31,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ryanshelby.spw.wallet.SPWApplication
 import com.ryanshelby.spw.wallet.data.model.AppLanguage
 import com.ryanshelby.spw.wallet.data.model.CryptoAsset
 import com.ryanshelby.spw.wallet.data.model.NetworkConfig
@@ -104,6 +108,9 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val strings = remember(activeLanguage) { TranslationHelper.getStrings(activeLanguage) }
+
+    val miningManager = remember { SPWApplication.instance.miningManager }
+    val miningState by miningManager.state.collectAsState()
 
     val nativeToken = remember(tokens) { tokens.firstOrNull { it.isNative } ?: CryptoAsset() }
     val totalBalanceSpw = nativeToken.balance
@@ -368,43 +375,159 @@ fun DashboardScreen(
             }
         }
 
-        // 4. On-Chain Security Features Card
-        item {
-            FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(SurfaceSubtle)
-                            .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = TextPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
+        // 4. Live Mining Status Card (Auto-hides if mining is not active)
+        if (miningState.isActive) {
+            item {
+                FinanceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        HapticUtil.lightTap(context)
+                        onNavigateToMining()
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Dual-Key Stealth & Offline Vaults",
-                            color = TextPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
-                        Text(
-                            text = "ECDH one-time shielded payments & air-gapped QR signing enabled",
-                            color = TextSecondary,
-                            fontSize = 11.sp
-                        )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Header Row: Status Indicator, Title, Hashrate Badge & Arrow
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(SemanticPositive.copy(alpha = 0.12f))
+                                        .border(0.8.dp, SemanticPositive.copy(alpha = 0.35f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Memory,
+                                        contentDescription = null,
+                                        tint = SemanticPositive,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(SemanticPositive)
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Text(
+                                            text = "MINING ACTIVE",
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    Text(
+                                        text = "${miningState.cpuAllocation}% CPU • ${String.format(Locale.US, "%.1f H/s", miningState.hashRate)}",
+                                        color = SemanticPositive,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Details",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                            }
+                        }
+
+                        // Financial Metric Row: Total Mined, Session Mined, Shares
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(SurfaceSubtle)
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("TOTAL MINED", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "+${String.format(Locale.US, "%.4f", miningState.totalMinedSpw)} SPW",
+                                    color = SemanticPositive,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                            Column {
+                                Text("THIS SESSION", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "+${String.format(Locale.US, "%.4f", miningState.sessionMinedSpw)} SPW",
+                                    color = TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("SHARES", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "${miningState.acceptedShares} Success • ${miningState.rejectedShares} Rej",
+                                    color = if (miningState.rejectedShares > 0) AmberGold else TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+
+                        // Block Telemetry in small characters (Previous, Current, Next Block)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Previous Block", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                                Text("#${miningState.previousBlockHeight} (${miningState.previousBlockHash})", color = TextMuted, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Current Block", color = TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text("#${miningState.currentBlockHeight} (${miningState.currentBlockHash})", color = SemanticPositive, fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Next Block", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                                Text("#${miningState.nextBlockHeight} (Pending)", color = TextMuted, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+                            }
+                        }
                     }
                 }
             }

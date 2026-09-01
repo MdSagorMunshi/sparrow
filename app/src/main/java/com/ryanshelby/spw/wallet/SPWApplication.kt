@@ -4,6 +4,7 @@ import android.app.Application
 import com.ryanshelby.spw.wallet.data.local.AppDatabase
 import com.ryanshelby.spw.wallet.data.remote.RpcClient
 import com.ryanshelby.spw.wallet.data.repository.WalletRepository
+import com.ryanshelby.spw.wallet.mining.MiningManager
 import com.ryanshelby.spw.wallet.security.SecurityManager
 import com.ryanshelby.spw.wallet.service.PushNotificationService
 
@@ -24,6 +25,9 @@ class SPWApplication : Application() {
     lateinit var walletRepository: WalletRepository
         private set
 
+    lateinit var miningManager: MiningManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -32,6 +36,7 @@ class SPWApplication : Application() {
         securityManager = SecurityManager(this)
         notificationService = PushNotificationService(this)
         rpcClient = RpcClient()
+        miningManager = MiningManager(this)
         walletRepository = WalletRepository(
             context = this,
             database = database,
