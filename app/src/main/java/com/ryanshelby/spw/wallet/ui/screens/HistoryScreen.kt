@@ -724,6 +724,11 @@ fun HistoryScreen(
     // ── Export ModalBottomSheet (PDF Statement & CSV Ledger) ──
     if (showExportSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        var exportScopeIsFiltered by remember { mutableStateOf(true) }
+        val targetTxs = if (exportScopeIsFiltered) filteredTransactions else transactions
+        val targetPeriodLabel = if (exportScopeIsFiltered) "Filtered (${selectedTimeframe.id})" else "Full Ledger"
+        val targetCsvLabel = if (exportScopeIsFiltered) "Filtered_${selectedTimeframe.id}" else "Full_Ledger"
+
         ModalBottomSheet(
             onDismissRequest = { showExportSheet = false },
             sheetState = sheetState,
@@ -760,122 +765,204 @@ fun HistoryScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // ── SECTION 1: PDF STATEMENT ────────────────────
-                Text(
-                    text = "OFFICIAL ACCOUNT STATEMENT (PDF)",
-                    color = CyanNeon,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Filtered PDF
-                Button(
-                    onClick = {
-                        showExportSheet = false
-                        com.ryanshelby.spw.wallet.security.PdfStatementExportUtil.exportAndSharePdf(
-                            context = context,
-                            transactions = filteredTransactions,
-                            walletAddress = walletAddress,
-                            networkName = network.name,
-                            periodLabel = "Filtered (${selectedTimeframe.id})"
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ButtonPrimary, contentColor = ButtonPrimaryText),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(17.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Export Filtered Statement (${filteredTransactions.size} txs)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Full PDF
-                Button(
-                    onClick = {
-                        showExportSheet = false
-                        com.ryanshelby.spw.wallet.security.PdfStatementExportUtil.exportAndSharePdf(
-                            context = context,
-                            transactions = transactions,
-                            walletAddress = walletAddress,
-                            networkName = network.name,
-                            periodLabel = "Full Ledger"
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceElevated, contentColor = TextPrimary),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(17.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Export Full Statement (${transactions.size} txs)",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── SECTION 2: CSV SPREADSHEET ──────────────────
+                // ── SCOPE SELECTOR TABS ─────────────────────────
                 Text(
-                    text = "RAW SPREADSHEET (CSV)",
+                    text = "SELECT DATA SCOPE",
                     color = TextMuted,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            showExportSheet = false
-                            CsvExportUtil.exportAndShareCsv(context, filteredTransactions, label = "Filtered_${selectedTimeframe.id}")
-                        },
+                    Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                        shape = RoundedCornerShape(10.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (exportScopeIsFiltered) SurfaceElevated else SurfacePrimary)
+                            .border(1.dp, if (exportScopeIsFiltered) BorderStrong else BorderSubtle, RoundedCornerShape(10.dp))
+                            .bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                exportScopeIsFiltered = true
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Filtered CSV", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = "Filtered (${filteredTransactions.size} txs)",
+                            color = if (exportScopeIsFiltered) CyanNeon else TextSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
-                    OutlinedButton(
-                        onClick = {
-                            showExportSheet = false
-                            CsvExportUtil.exportAndShareCsv(context, transactions, label = "Full_Ledger")
-                        },
+                    Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                        shape = RoundedCornerShape(10.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (!exportScopeIsFiltered) SurfaceElevated else SurfacePrimary)
+                            .border(1.dp, if (!exportScopeIsFiltered) BorderStrong else BorderSubtle, RoundedCornerShape(10.dp))
+                            .bouncyClickable {
+                                HapticUtil.lightTap(context)
+                                exportScopeIsFiltered = false
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Full CSV", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = "All History (${transactions.size} txs)",
+                            color = if (!exportScopeIsFiltered) CyanNeon else TextSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // ── OPTION 1: OFFICIAL PDF STATEMENT ────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SurfacePrimary)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text("Official Statement (PDF)", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("Institutional formatted bank-grade audit document", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    showExportSheet = false
+                                    com.ryanshelby.spw.wallet.security.PdfStatementExportUtil.exportAndSavePdfToDevice(
+                                        context = context,
+                                        transactions = targetTxs,
+                                        walletAddress = walletAddress,
+                                        networkName = network.name,
+                                        periodLabel = targetPeriodLabel
+                                    )
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ButtonPrimary, contentColor = ButtonPrimaryText),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Save to Device", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+
+                            Button(
+                                onClick = {
+                                    showExportSheet = false
+                                    com.ryanshelby.spw.wallet.security.PdfStatementExportUtil.exportAndSharePdf(
+                                        context = context,
+                                        transactions = targetTxs,
+                                        walletAddress = walletAddress,
+                                        networkName = network.name,
+                                        periodLabel = targetPeriodLabel
+                                    )
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SurfaceElevated, contentColor = TextPrimary),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Share", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            }
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // ── OPTION 2: RAW SPREADSHEET (CSV) ────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SurfacePrimary)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Analytics, contentDescription = null, tint = TextMuted, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text("Accounting Ledger (CSV)", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("Raw tabular spreadsheet for tax software & Excel", color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    showExportSheet = false
+                                    CsvExportUtil.exportAndSaveCsvToDevice(context, targetTxs, label = targetCsvLabel)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Save to Device", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    showExportSheet = false
+                                    CsvExportUtil.exportAndShareCsv(context, targetTxs, label = targetCsvLabel)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Share", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

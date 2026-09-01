@@ -44,13 +44,13 @@ object PdfStatementExportUtil {
     private val COLOR_ROW_ALT_BG = Color.rgb(250, 250, 250)
     private val COLOR_BORDER = Color.rgb(226, 232, 240) // Slate 200
 
-    fun exportAndSharePdf(
+    fun generatePdfFile(
         context: Context,
         transactions: List<TransactionItem>,
         walletAddress: String,
         networkName: String = "SPW Mainnet",
         periodLabel: String = "All Time"
-    ): Boolean {
+    ): Pair<File, String>? {
         return try {
             val pdfDocument = PdfDocument()
 
@@ -77,7 +77,7 @@ object PdfStatementExportUtil {
 
             // Pagination calculation
             val rowHeight = 28f
-            val page1AvailableHeight = 490f // available for rows after header and summary box
+            val page1AvailableHeight = 490f
             val page1MaxRows = (page1AvailableHeight / rowHeight).toInt().coerceAtLeast(1)
             val subsequentPageAvailableHeight = 670f
             val subsequentPageMaxRows = (subsequentPageAvailableHeight / rowHeight).toInt().coerceAtLeast(1)
@@ -96,7 +96,6 @@ object PdfStatementExportUtil {
                 val page = pdfDocument.startPage(pageInfo)
                 val canvas = page.canvas
 
-                // Setup Paints
                 val paint = Paint().apply { isAntiAlias = true }
                 val boldTypeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 val regularTypeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
@@ -105,7 +104,7 @@ object PdfStatementExportUtil {
                 var y = 40f
 
                 if (pageNumber == 1) {
-                    // ── Header (Page 1) ─────────────────────────
+                    // Header
                     paint.typeface = boldTypeface
                     paint.textSize = 18f
                     paint.color = COLOR_PRIMARY_DARK
@@ -138,7 +137,7 @@ object PdfStatementExportUtil {
 
                     y += 50f
 
-                    // ── Summary Box ─────────────────────────────
+                    // Summary Box
                     val summaryBoxHeight = 100f
                     val summaryRect = RectF(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y + summaryBoxHeight)
                     paint.color = COLOR_CARD_BG
@@ -149,7 +148,7 @@ object PdfStatementExportUtil {
                     canvas.drawRoundRect(summaryRect, 8f, 8f, paint)
                     paint.style = Paint.Style.FILL
 
-                    // Account Details (Left Half)
+                    // Account Details
                     paint.typeface = boldTypeface
                     paint.textSize = 7.5f
                     paint.color = COLOR_TEXT_MUTED
@@ -171,16 +170,14 @@ object PdfStatementExportUtil {
                     canvas.drawText("Network: $networkName  •  Period: $periodLabel  •  Records: ${transactions.size}", MARGIN_LEFT + 14f, y + 46f, paint)
                     canvas.drawText("Generated: $generatedDateStr", MARGIN_LEFT + 14f, y + 58f, paint)
 
-                    // Financial Tiles (Right Half)
+                    // Financial Tiles
                     val rightColX = MARGIN_LEFT + CONTENT_WIDTH * 0.52f
                     val tileWidth = (CONTENT_WIDTH * 0.44f) / 2f
 
-                    // Divider in summary box
                     paint.color = COLOR_BORDER
                     paint.strokeWidth = 0.8f
                     canvas.drawLine(rightColX - 10f, y + 10f, rightColX - 10f, y + summaryBoxHeight - 10f, paint)
 
-                    // Total Received
                     paint.typeface = boldTypeface
                     paint.textSize = 7f
                     paint.color = COLOR_TEXT_MUTED
@@ -190,7 +187,6 @@ object PdfStatementExportUtil {
                     paint.color = COLOR_EMERALD
                     canvas.drawText("+${String.format(Locale.US, "%.4f", totalInflow)} SPW", rightColX, y + 32f, paint)
 
-                    // Total Sent
                     paint.typeface = boldTypeface
                     paint.textSize = 7f
                     paint.color = COLOR_TEXT_MUTED
@@ -200,7 +196,6 @@ object PdfStatementExportUtil {
                     paint.color = COLOR_PRIMARY_DARK
                     canvas.drawText("-${String.format(Locale.US, "%.4f", totalOutflow)} SPW", rightColX + tileWidth, y + 32f, paint)
 
-                    // Net Flow
                     paint.typeface = boldTypeface
                     paint.textSize = 7f
                     paint.color = COLOR_TEXT_MUTED
@@ -210,7 +205,6 @@ object PdfStatementExportUtil {
                     paint.color = if (netVolume >= 0) COLOR_EMERALD else COLOR_RUBY
                     canvas.drawText((if (netVolume >= 0) "+" else "") + String.format(Locale.US, "%.4f", netVolume) + " SPW", rightColX, y + 70f, paint)
 
-                    // Total Gas Fees
                     paint.typeface = boldTypeface
                     paint.textSize = 7f
                     paint.color = COLOR_TEXT_MUTED
@@ -222,7 +216,6 @@ object PdfStatementExportUtil {
 
                     y += summaryBoxHeight + 20f
                 } else {
-                    // Header for Subsequent Pages
                     paint.typeface = boldTypeface
                     paint.textSize = 10f
                     paint.color = COLOR_PRIMARY_DARK
@@ -240,7 +233,7 @@ object PdfStatementExportUtil {
                     y += 30f
                 }
 
-                // ── Table Header ────────────────────────────────────
+                // Table Header
                 val colDate = MARGIN_LEFT + 8f
                 val colType = MARGIN_LEFT + 95f
                 val colCounterparty = MARGIN_LEFT + 170f
@@ -267,7 +260,7 @@ object PdfStatementExportUtil {
 
                 y += tableHeaderHeight + 4f
 
-                // ── Table Rows ──────────────────────────────────────
+                // Table Rows
                 if (totalRows == 0) {
                     paint.typeface = regularTypeface
                     paint.textSize = 9f
@@ -282,25 +275,21 @@ object PdfStatementExportUtil {
                     while (currentRowIndex < totalRows && rowsDrawnThisPage < maxRowsThisPage) {
                         val tx = transactions[currentRowIndex]
 
-                        // Row background alternating
                         if (rowsDrawnThisPage % 2 == 1) {
                             paint.color = COLOR_ROW_ALT_BG
                             canvas.drawRect(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y + rowHeight, paint)
                         }
 
-                        // Bottom divider per row
                         paint.color = COLOR_BORDER
                         paint.strokeWidth = 0.5f
                         canvas.drawLine(MARGIN_LEFT, y + rowHeight, PAGE_WIDTH - MARGIN_RIGHT, y + rowHeight, paint)
 
-                        // Date
                         val txDate = Date(if (tx.timestamp > 1000000000000L) tx.timestamp else tx.timestamp * 1000L)
                         paint.typeface = regularTypeface
                         paint.textSize = 7.5f
                         paint.color = COLOR_TEXT_SECONDARY
                         canvas.drawText(rowDateFormat.format(txDate), colDate, y + 16f, paint)
 
-                        // Type
                         val isIncoming = tx.type == TransactionType.RECEIVE
                         val isStealth = tx.type == TransactionType.STEALTH
                         paint.typeface = boldTypeface
@@ -313,7 +302,6 @@ object PdfStatementExportUtil {
                         }
                         canvas.drawText(typeStr, colType, y + 16f, paint)
 
-                        // Counterparty Address & Memo
                         val counterparty = if (isIncoming) tx.fromAddress else tx.toAddress
                         paint.typeface = monoTypeface
                         paint.textSize = 7.5f
@@ -331,14 +319,12 @@ object PdfStatementExportUtil {
                             canvas.drawText("Memo: $memoTrunc", colCounterparty, y + 22f, paint)
                         }
 
-                        // TXID
                         paint.typeface = monoTypeface
                         paint.textSize = 7f
                         paint.color = COLOR_TEXT_MUTED
                         val txidDisplay = if (tx.txHash.length > 16) tx.txHash.take(6) + "..." + tx.txHash.takeLast(6) else tx.txHash
                         canvas.drawText(txidDisplay, colTxId, y + 16f, paint)
 
-                        // Amount & Fee
                         paint.textAlign = Paint.Align.RIGHT
                         paint.typeface = boldTypeface
                         paint.textSize = 8.5f
@@ -360,7 +346,7 @@ object PdfStatementExportUtil {
                     }
                 }
 
-                // ── Footer (All Pages) ──────────────────────────────
+                // Footer
                 val footerY = PAGE_HEIGHT - 35f
                 paint.color = COLOR_BORDER
                 paint.strokeWidth = 0.8f
@@ -378,7 +364,6 @@ object PdfStatementExportUtil {
                 pdfDocument.finishPage(page)
             }
 
-            // Save PDF to cache exports directory
             val exportDir = File(context.cacheDir, "exports")
             if (!exportDir.exists()) {
                 exportDir.mkdirs()
@@ -392,7 +377,28 @@ object PdfStatementExportUtil {
             fos.close()
             pdfDocument.close()
 
-            // Trigger System Share Sheet with read grant
+            Pair(pdfFile, statementId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate PDF statement", e)
+            null
+        }
+    }
+
+    fun exportAndSharePdf(
+        context: Context,
+        transactions: List<TransactionItem>,
+        walletAddress: String,
+        networkName: String = "SPW Mainnet",
+        periodLabel: String = "All Time"
+    ): Boolean {
+        return try {
+            val result = generatePdfFile(context, transactions, walletAddress, networkName, periodLabel)
+            if (result == null) {
+                Toast.makeText(context, "Failed to generate PDF statement", Toast.LENGTH_SHORT).show()
+                return false
+            }
+
+            val (pdfFile, statementId) = result
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -415,9 +421,25 @@ object PdfStatementExportUtil {
             context.startActivity(chooser)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to export PDF statement", e)
-            Toast.makeText(context, "Export error: ${e.localizedMessage ?: "Failed to generate PDF"}", Toast.LENGTH_LONG).show()
+            Log.e(TAG, "Failed to share PDF statement", e)
+            Toast.makeText(context, "Share error: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
             false
         }
+    }
+
+    fun exportAndSavePdfToDevice(
+        context: Context,
+        transactions: List<TransactionItem>,
+        walletAddress: String,
+        networkName: String = "SPW Mainnet",
+        periodLabel: String = "All Time"
+    ): Boolean {
+        val result = generatePdfFile(context, transactions, walletAddress, networkName, periodLabel)
+        if (result == null) {
+            Toast.makeText(context, "Failed to generate PDF statement", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        val (pdfFile, _) = result
+        return StorageExportHelper.saveFileToDownloads(context, pdfFile, "application/pdf")
     }
 }

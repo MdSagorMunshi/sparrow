@@ -1,7 +1,10 @@
 package com.ryanshelby.spw.wallet.security
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
 import com.ryanshelby.spw.wallet.data.model.TransactionType
@@ -14,6 +17,8 @@ import java.util.Locale
  * Utility for exporting SPW transaction history to a standardized accounting CSV report.
  */
 object CsvExportUtil {
+
+    private const val TAG = "CsvExportUtil"
 
     fun generateCsv(transactions: List<TransactionItem>, includeSummary: Boolean = true): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
@@ -28,7 +33,7 @@ object CsvExportUtil {
 
         for (tx in transactions) {
             val dateStr = try {
-                dateFormat.format(Date(tx.timestamp * 1000L))
+                dateFormat.format(Date(if (tx.timestamp > 1000000000000L) tx.timestamp else tx.timestamp * 1000L))
             } catch (e: Exception) {
                 tx.timestamp.toString()
             }
@@ -68,11 +73,7 @@ object CsvExportUtil {
         return sb.toString()
     }
 
-    fun exportAndShareCsv(
-        context: Context,
-        transactions: List<TransactionItem>,
-        label: String = "Ledger"
-    ): Boolean {
+    fun generateCsvFile(context: Context, transactions: List<TransactionItem>, label: String = "Ledger"): File? {
         return try {
             val csvContent = generateCsv(transactions, includeSummary = true)
             val exportDir = File(context.cacheDir, "exports")
@@ -84,6 +85,24 @@ object CsvExportUtil {
             val safeLabel = label.lowercase().replace(" ", "_")
             val file = File(exportDir, "sparrow_${safeLabel}_$timestamp.csv")
             file.writeText(csvContent)
+            file
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate CSV file", e)
+            null
+        }
+    }
+
+    fun exportAndShareCsv(
+        context: Context,
+        transactions: List<TransactionItem>,
+        label: String = "Ledger"
+    ): Boolean {
+        return try {
+            val file = generateCsvFile(context, transactions, label)
+            if (file == null) {
+                Toast.makeText(context, "Failed to generate CSV file", Toast.LENGTH_SHORT).show()
+                return false
+            }
 
             val uri = FileProvider.getUriForFile(
                 context,
@@ -91,21 +110,40 @@ object CsvExportUtil {
                 file
             )
 
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/csv"
                 putExtra(Intent.EXTRA_SUBJECT, "SPW Wallet Financial $label ($timestamp)")
                 putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri("Ledger CSV", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            val chooser = Intent.createChooser(shareIntent, "Export $label (CSV)")
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val chooser = Intent.createChooser(shareIntent, "Export $label (CSV)").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
             context.startActivity(chooser)
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to share CSV", e)
+            Toast.makeText(context, "Share error: ${e.localizedMessage ?: "Unknown error"}", Toast.LENGTH_LONG).show()
             false
         }
+    }
+
+    fun exportAndSaveCsvToDevice(
+        context: Context,
+        transactions: List<TransactionItem>,
+        label: String = "Ledger"
+    ): Boolean {
+        val file = generateCsvFile(context, transactions, label)
+        if (file == null) {
+            Toast.makeText(context, "Failed to generate CSV file", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return StorageExportHelper.saveFileToDownloads(context, file, "text/csv")
     }
 
     private fun escapeCsv(value: String): String {
