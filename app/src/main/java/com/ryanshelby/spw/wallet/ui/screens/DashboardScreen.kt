@@ -44,10 +44,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ryanshelby.spw.wallet.R
 import com.ryanshelby.spw.wallet.SPWApplication
 import com.ryanshelby.spw.wallet.data.model.AppLanguage
 import com.ryanshelby.spw.wallet.data.model.CryptoAsset
@@ -257,7 +259,7 @@ fun DashboardScreen(
                     }
                 )
                 QuickActionButton(
-                    icon = Icons.Default.Security,
+                    icon = ImageVector.vectorResource(id = R.drawable.ic_mining_pickaxe),
                     label = "Mining",
                     onClick = {
                         HapticUtil.lightTap(context)
