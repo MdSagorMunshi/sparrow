@@ -1,5 +1,6 @@
 package com.ryanshelby.spw.wallet.security
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
@@ -8,6 +9,8 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.ryanshelby.spw.wallet.data.model.TransactionItem
 import com.ryanshelby.spw.wallet.data.model.TransactionType
@@ -23,6 +26,7 @@ import kotlin.math.ceil
  */
 object PdfStatementExportUtil {
 
+    private const val TAG = "PdfStatementExport"
     private const val PAGE_WIDTH = 595 // A4 standard width in points (72 dpi)
     private const val PAGE_HEIGHT = 842 // A4 standard height in points (72 dpi)
     private const val MARGIN_LEFT = 36f
@@ -264,87 +268,96 @@ object PdfStatementExportUtil {
                 y += tableHeaderHeight + 4f
 
                 // ── Table Rows ──────────────────────────────────────
-                val maxRowsThisPage = if (pageNumber == 1) page1MaxRows else subsequentPageMaxRows
-                var rowsDrawnThisPage = 0
-
-                while (currentRowIndex < totalRows && rowsDrawnThisPage < maxRowsThisPage) {
-                    val tx = transactions[currentRowIndex]
-
-                    // Row background alternating
-                    if (rowsDrawnThisPage % 2 == 1) {
-                        paint.color = COLOR_ROW_ALT_BG
-                        canvas.drawRect(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y + rowHeight, paint)
-                    }
-
-                    // Bottom divider per row
-                    paint.color = COLOR_BORDER
-                    paint.strokeWidth = 0.5f
-                    canvas.drawLine(MARGIN_LEFT, y + rowHeight, PAGE_WIDTH - MARGIN_RIGHT, y + rowHeight, paint)
-
-                    // Date
-                    val txDate = Date(if (tx.timestamp > 1000000000000L) tx.timestamp else tx.timestamp * 1000L)
+                if (totalRows == 0) {
                     paint.typeface = regularTypeface
-                    paint.textSize = 7.5f
-                    paint.color = COLOR_TEXT_SECONDARY
-                    canvas.drawText(rowDateFormat.format(txDate), colDate, y + 16f, paint)
-
-                    // Type
-                    val isIncoming = tx.type == TransactionType.RECEIVE
-                    val isStealth = tx.type == TransactionType.STEALTH
-                    paint.typeface = boldTypeface
-                    paint.textSize = 7.5f
-                    paint.color = if (isIncoming) COLOR_EMERALD else COLOR_PRIMARY_DARK
-                    val typeStr = when {
-                        isStealth -> "STEALTH"
-                        isIncoming -> "RECEIVED"
-                        else -> "SENT"
-                    }
-                    canvas.drawText(typeStr, colType, y + 16f, paint)
-
-                    // Counterparty Address & Memo
-                    val counterparty = if (isIncoming) tx.fromAddress else tx.toAddress
-                    paint.typeface = monoTypeface
-                    paint.textSize = 7.5f
-                    paint.color = COLOR_PRIMARY_DARK
-                    val displayCounterparty = if (counterparty.isNotBlank()) {
-                        if (counterparty.length > 22) counterparty.take(9) + "..." + counterparty.takeLast(8) else counterparty
-                    } else "Direct Protocol"
-                    canvas.drawText(displayCounterparty, colCounterparty, y + 12f, paint)
-
-                    if (tx.memo.isNotBlank()) {
-                        paint.typeface = regularTypeface
-                        paint.textSize = 6.5f
-                        paint.color = COLOR_TEXT_MUTED
-                        val memoTrunc = if (tx.memo.length > 30) tx.memo.take(28) + ".." else tx.memo
-                        canvas.drawText("Memo: $memoTrunc", colCounterparty, y + 22f, paint)
-                    }
-
-                    // TXID
-                    paint.typeface = monoTypeface
-                    paint.textSize = 7f
+                    paint.textSize = 9f
                     paint.color = COLOR_TEXT_MUTED
-                    val txidDisplay = if (tx.txHash.length > 16) tx.txHash.take(6) + "..." + tx.txHash.takeLast(6) else tx.txHash
-                    canvas.drawText(txidDisplay, colTxId, y + 16f, paint)
-
-                    // Amount & Fee
-                    paint.textAlign = Paint.Align.RIGHT
-                    paint.typeface = boldTypeface
-                    paint.textSize = 8.5f
-                    paint.color = if (isIncoming) COLOR_EMERALD else COLOR_PRIMARY_DARK
-                    val amountStr = (if (isIncoming) "+" else "-") + String.format(Locale.US, "%.4f", tx.amountSpw)
-                    canvas.drawText(amountStr, colAmount, y + 12f, paint)
-
-                    if (tx.feeSpw > 0) {
-                        paint.typeface = regularTypeface
-                        paint.textSize = 6.5f
-                        paint.color = COLOR_TEXT_MUTED
-                        canvas.drawText("fee: ${String.format(Locale.US, "%.4f", tx.feeSpw)}", colAmount, y + 22f, paint)
-                    }
+                    paint.textAlign = Paint.Align.CENTER
+                    canvas.drawText("No transaction records found for this period.", PAGE_WIDTH / 2f, y + 30f, paint)
                     paint.textAlign = Paint.Align.LEFT
+                } else {
+                    val maxRowsThisPage = if (pageNumber == 1) page1MaxRows else subsequentPageMaxRows
+                    var rowsDrawnThisPage = 0
 
-                    y += rowHeight
-                    currentRowIndex++
-                    rowsDrawnThisPage++
+                    while (currentRowIndex < totalRows && rowsDrawnThisPage < maxRowsThisPage) {
+                        val tx = transactions[currentRowIndex]
+
+                        // Row background alternating
+                        if (rowsDrawnThisPage % 2 == 1) {
+                            paint.color = COLOR_ROW_ALT_BG
+                            canvas.drawRect(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y + rowHeight, paint)
+                        }
+
+                        // Bottom divider per row
+                        paint.color = COLOR_BORDER
+                        paint.strokeWidth = 0.5f
+                        canvas.drawLine(MARGIN_LEFT, y + rowHeight, PAGE_WIDTH - MARGIN_RIGHT, y + rowHeight, paint)
+
+                        // Date
+                        val txDate = Date(if (tx.timestamp > 1000000000000L) tx.timestamp else tx.timestamp * 1000L)
+                        paint.typeface = regularTypeface
+                        paint.textSize = 7.5f
+                        paint.color = COLOR_TEXT_SECONDARY
+                        canvas.drawText(rowDateFormat.format(txDate), colDate, y + 16f, paint)
+
+                        // Type
+                        val isIncoming = tx.type == TransactionType.RECEIVE
+                        val isStealth = tx.type == TransactionType.STEALTH
+                        paint.typeface = boldTypeface
+                        paint.textSize = 7.5f
+                        paint.color = if (isIncoming) COLOR_EMERALD else COLOR_PRIMARY_DARK
+                        val typeStr = when {
+                            isStealth -> "STEALTH"
+                            isIncoming -> "RECEIVED"
+                            else -> "SENT"
+                        }
+                        canvas.drawText(typeStr, colType, y + 16f, paint)
+
+                        // Counterparty Address & Memo
+                        val counterparty = if (isIncoming) tx.fromAddress else tx.toAddress
+                        paint.typeface = monoTypeface
+                        paint.textSize = 7.5f
+                        paint.color = COLOR_PRIMARY_DARK
+                        val displayCounterparty = if (counterparty.isNotBlank()) {
+                            if (counterparty.length > 22) counterparty.take(9) + "..." + counterparty.takeLast(8) else counterparty
+                        } else "Direct Protocol"
+                        canvas.drawText(displayCounterparty, colCounterparty, y + 12f, paint)
+
+                        if (tx.memo.isNotBlank()) {
+                            paint.typeface = regularTypeface
+                            paint.textSize = 6.5f
+                            paint.color = COLOR_TEXT_MUTED
+                            val memoTrunc = if (tx.memo.length > 30) tx.memo.take(28) + ".." else tx.memo
+                            canvas.drawText("Memo: $memoTrunc", colCounterparty, y + 22f, paint)
+                        }
+
+                        // TXID
+                        paint.typeface = monoTypeface
+                        paint.textSize = 7f
+                        paint.color = COLOR_TEXT_MUTED
+                        val txidDisplay = if (tx.txHash.length > 16) tx.txHash.take(6) + "..." + tx.txHash.takeLast(6) else tx.txHash
+                        canvas.drawText(txidDisplay, colTxId, y + 16f, paint)
+
+                        // Amount & Fee
+                        paint.textAlign = Paint.Align.RIGHT
+                        paint.typeface = boldTypeface
+                        paint.textSize = 8.5f
+                        paint.color = if (isIncoming) COLOR_EMERALD else COLOR_PRIMARY_DARK
+                        val amountStr = (if (isIncoming) "+" else "-") + String.format(Locale.US, "%.4f", tx.amountSpw)
+                        canvas.drawText(amountStr, colAmount, y + 12f, paint)
+
+                        if (tx.feeSpw > 0) {
+                            paint.typeface = regularTypeface
+                            paint.textSize = 6.5f
+                            paint.color = COLOR_TEXT_MUTED
+                            canvas.drawText("fee: ${String.format(Locale.US, "%.4f", tx.feeSpw)}", colAmount, y + 22f, paint)
+                        }
+                        paint.textAlign = Paint.Align.LEFT
+
+                        y += rowHeight
+                        currentRowIndex++
+                        rowsDrawnThisPage++
+                    }
                 }
 
                 // ── Footer (All Pages) ──────────────────────────────
@@ -365,8 +378,8 @@ object PdfStatementExportUtil {
                 pdfDocument.finishPage(page)
             }
 
-            // Save PDF to cache directory
-            val exportDir = File(context.cacheDir, "statements")
+            // Save PDF to cache exports directory
+            val exportDir = File(context.cacheDir, "exports")
             if (!exportDir.exists()) {
                 exportDir.mkdirs()
             }
@@ -379,7 +392,7 @@ object PdfStatementExportUtil {
             fos.close()
             pdfDocument.close()
 
-            // Trigger System Share Sheet
+            // Trigger System Share Sheet with read grant
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -390,15 +403,20 @@ object PdfStatementExportUtil {
                 type = "application/pdf"
                 putExtra(Intent.EXTRA_SUBJECT, "SPARROW Account Statement ($statementId)")
                 putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri("Statement PDF", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            val chooser = Intent.createChooser(shareIntent, "Share Official Bank-Grade Statement (PDF)")
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val chooser = Intent.createChooser(shareIntent, "Share Bank-Grade Statement (PDF)").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
             context.startActivity(chooser)
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to export PDF statement", e)
+            Toast.makeText(context, "Export error: ${e.localizedMessage ?: "Failed to generate PDF"}", Toast.LENGTH_LONG).show()
             false
         }
     }
