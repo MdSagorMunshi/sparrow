@@ -218,16 +218,8 @@ class MainActivity : FragmentActivity() {
                                     isWalletUnlocked = false
                                     val currentDest = navController.currentDestination
                                     if (currentDest != null && currentDest.route != "pin_lock") {
-                                        val rootGraphId = try { navController.graph.id } catch (_: Exception) { null }
-                                        if (rootGraphId != null) {
-                                            navController.navigate("pin_lock") {
-                                                popUpTo(rootGraphId) { inclusive = true }
-                                                launchSingleTop = true
-                                            }
-                                        } else {
-                                            navController.navigate("pin_lock") {
-                                                launchSingleTop = true
-                                            }
+                                        navController.navigate("pin_lock") {
+                                            launchSingleTop = true
                                         }
                                     }
                                 }
@@ -248,7 +240,7 @@ class MainActivity : FragmentActivity() {
                 DisposableEffect(lifecycleOwner, currentRoute, sendToggleEnabled) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
-                            if (currentRoute == "receive" || (currentRoute?.startsWith("send") == true && sendToggleEnabled)) {
+                            if (currentRoute?.startsWith("send") == true && sendToggleEnabled) {
                                 nfcManager.enableReaderMode()
                             } else {
                                 nfcManager.disableReaderMode()
@@ -345,8 +337,12 @@ class MainActivity : FragmentActivity() {
                                     isScramblePin = securityManager.isScramblePin(),
                                     onPinSuccess = {
                                         isWalletUnlocked = true
-                                        navController.navigate("dashboard") {
-                                            popUpTo("pin_lock") { inclusive = true }
+                                        if (navController.previousBackStackEntry != null) {
+                                            navController.popBackStack()
+                                        } else {
+                                            navController.navigate("dashboard") {
+                                                popUpTo("pin_lock") { inclusive = true }
+                                            }
                                         }
                                     },
                                     onBiometricRequest = { onAuthSuccess ->
@@ -503,6 +499,10 @@ class MainActivity : FragmentActivity() {
                                     initialAmount = initialAmount,
                                     isNfcSupported = isNfcSupported,
                                     isNfcEnabled = isNfcEnabled,
+                                    isNfcAutoScanEnabled = securityManager.isNfcSendToggleEnabled(),
+                                    isNfcRequireAuth = securityManager.isNfcRequireAuth(),
+                                    pendingNfcInvoice = if (currentRoute?.startsWith("send") == true) pendingNfcInvoice else null,
+                                    onClearNfcInvoice = { pendingNfcInvoice = null },
                                     tokens = tokens,
                                     contacts = contacts,
                                     network = activeNetwork,
@@ -534,8 +534,11 @@ class MainActivity : FragmentActivity() {
                                             }
                                         )
                                     },
-                                    onNfcTapToPayClick = {
+                                    onStartNfcScan = {
                                         nfcManager.enableReaderMode()
+                                    },
+                                    onStopNfcScan = {
+                                        nfcManager.disableReaderMode()
                                     },
                                     onScannedPaymentInvoice = { invoice ->
                                         pendingNfcInvoice = invoice
@@ -709,32 +712,67 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                     
-                    // Render NFC Payment Popup over everything
-                    pendingNfcInvoice?.let { invoice ->
-                        com.ryanshelby.spw.wallet.ui.components.NfcPaymentPopup(
-                            invoice = invoice,
-                            onDismiss = { pendingNfcInvoice = null },
-                            onConfirmPayment = { amount ->
-                                pendingNfcInvoice = null
-                                // If require auth is true, trigger biometrics
-                                if (securityManager.isNfcRequireAuth() && securityManager.canAuthenticateWithBiometrics()) {
-                                    securityManager.authenticateWithBiometrics(
-                                        activity = this@MainActivity,
-                                        title = "Authorize NFC Payment",
-                                        subtitle = "Biometric confirmation required to pay ${invoice.name}",
-                                        onSuccess = {
-                                            navController.navigate("send?token=${invoice.token ?: "SPW"}&recipient=${invoice.address}&amount=$amount")
-                                        },
-                                        onError = { err ->
-                                            Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                    // Render NFC Payment Popup when outside the Send screen (e.g. payer scanning on Dashboard)
+                    var isGlobalNfcBroadcasting by remember { mutableStateOf(false) }
+                    var globalNfcBroadcastTxHash by remember { mutableStateOf<String?>(null) }
+                    var globalNfcBroadcastError by remember { mutableStateOf<String?>(null) }
+
+                    if (currentRoute?.startsWith("send") != true && pendingNfcInvoice != null) {
+                        pendingNfcInvoice?.let { invoice ->
+                            com.ryanshelby.spw.wallet.ui.components.NfcPaymentPopup(
+                                invoice = invoice,
+                                isBroadcasting = isGlobalNfcBroadcasting,
+                                broadcastTxHash = globalNfcBroadcastTxHash,
+                                broadcastError = globalNfcBroadcastError,
+                                onDismiss = {
+                                    pendingNfcInvoice = null
+                                    isGlobalNfcBroadcasting = false
+                                    globalNfcBroadcastTxHash = null
+                                    globalNfcBroadcastError = null
+                                },
+                                onConfirmPayment = { amount ->
+                                    val executeTransfer = {
+                                        isGlobalNfcBroadcasting = true
+                                        globalNfcBroadcastError = null
+                                        scope.launch {
+                                            val result = repository.sendTransfer(
+                                                tokenSymbol = invoice.token ?: "SPW",
+                                                toAddress = invoice.address,
+                                                amount = amount,
+                                                gasFee = 0.0001,
+                                                memo = "NFC Payment Request",
+                                                isStealth = false,
+                                                recipientViewPubHex = null
+                                            )
+                                            isGlobalNfcBroadcasting = false
+                                            if (result.isSuccess) {
+                                                globalNfcBroadcastTxHash = result.getOrNull() ?: "Confirmed"
+                                                HapticUtil.performSuccess(context)
+                                            } else {
+                                                globalNfcBroadcastError = result.exceptionOrNull()?.message ?: "Transfer failed"
+                                                HapticUtil.performError(context)
+                                            }
                                         }
-                                    )
-                                } else {
-                                    // Otherwise navigate directly to send screen
-                                    navController.navigate("send?token=${invoice.token ?: "SPW"}&recipient=${invoice.address}&amount=$amount")
+                                    }
+
+                                    if (securityManager.isNfcRequireAuth() && securityManager.canAuthenticateWithBiometrics()) {
+                                        securityManager.authenticateWithBiometrics(
+                                            activity = this@MainActivity,
+                                            title = "Authorize NFC Payment",
+                                            subtitle = "Biometric confirmation required to pay ${invoice.name}",
+                                            onSuccess = {
+                                                executeTransfer()
+                                            },
+                                            onError = { err ->
+                                                Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    } else {
+                                        executeTransfer()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

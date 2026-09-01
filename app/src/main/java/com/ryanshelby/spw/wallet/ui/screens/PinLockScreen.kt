@@ -1,5 +1,7 @@
 package com.ryanshelby.spw.wallet.ui.screens
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -69,6 +71,10 @@ fun PinLockScreen(
     getRemainingLockoutSeconds: () -> Long = { 0L }
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
+    BackHandler(enabled = !isFirstTimeSetup) {
+        activity?.moveTaskToBack(true)
+    }
     val strings = remember(activeLanguage) { TranslationHelper.getStrings(activeLanguage) }
 
     var enteredPin by remember { mutableStateOf("") }

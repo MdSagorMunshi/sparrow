@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,6 +47,8 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -114,6 +117,12 @@ fun SendTransferScreen(
     onTriggerBiometric: (onSuccess: () -> Unit) -> Unit,
     isNfcSupported: Boolean = false,
     isNfcEnabled: Boolean = false,
+    isNfcAutoScanEnabled: Boolean = false,
+    isNfcRequireAuth: Boolean = true,
+    pendingNfcInvoice: com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice? = null,
+    onClearNfcInvoice: () -> Unit = {},
+    onStartNfcScan: () -> Unit = {},
+    onStopNfcScan: () -> Unit = {},
     onNfcTapToPayClick: () -> Unit = {},
     onScannedPaymentInvoice: (com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice) -> Unit = {}
 ) {
@@ -182,6 +191,42 @@ fun SendTransferScreen(
     var txOverlayState by remember { mutableStateOf(TxOverlayState.HIDDEN) }
     var overlayTxHash by remember { mutableStateOf<String?>(null) }
     var overlayError by remember { mutableStateOf<String?>(null) }
+
+    // NFC Popup State
+    var showNfcPopup by remember { mutableStateOf(false) }
+    var isNfcScanning by remember { mutableStateOf(false) }
+    var activeNfcInvoice by remember { mutableStateOf<com.ryanshelby.spw.wallet.nfc.NfcPaymentInvoice?>(null) }
+    var isNfcBroadcasting by remember { mutableStateOf(false) }
+    var nfcBroadcastTxHash by remember { mutableStateOf<String?>(null) }
+    var nfcBroadcastError by remember { mutableStateOf<String?>(null) }
+
+    // Auto-Scan on Entrance
+    LaunchedEffect(isNfcSupported, isNfcEnabled, isNfcAutoScanEnabled) {
+        if (isNfcSupported && isNfcEnabled && isNfcAutoScanEnabled) {
+            activeNfcInvoice = null
+            nfcBroadcastTxHash = null
+            nfcBroadcastError = null
+            isNfcBroadcasting = false
+            showNfcPopup = true
+            isNfcScanning = true
+            onStartNfcScan()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            onStopNfcScan()
+        }
+    }
+
+    // When an NFC tap is received from manager
+    LaunchedEffect(pendingNfcInvoice) {
+        pendingNfcInvoice?.let { invoice ->
+            activeNfcInvoice = invoice
+            isNfcScanning = false
+            showNfcPopup = true
+        }
+    }
 
     val amountValue = amountText.toDoubleOrNull() ?: 0.0
     val amountFeathers = (amountValue * SPWCrypto.FEATHERS_PER_SPW).toLong()
@@ -311,15 +356,20 @@ fun SendTransferScreen(
                                 .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
                                 .bouncyClickable {
                                     HapticUtil.lightTap(context)
-                                    onNfcTapToPayClick()
-                                    Toast.makeText(context, "NFC Reader Enabled. Tap to pay.", Toast.LENGTH_SHORT).show()
+                                    activeNfcInvoice = null
+                                    nfcBroadcastTxHash = null
+                                    nfcBroadcastError = null
+                                    isNfcBroadcasting = false
+                                    showNfcPopup = true
+                                    isNfcScanning = true
+                                    onStartNfcScan()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Speed,
+                                imageVector = Icons.Default.Nfc,
                                 contentDescription = "Tap to Pay",
-                                tint = TextPrimary,
+                                tint = CyanNeon,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -1045,6 +1095,62 @@ fun SendTransferScreen(
                 overlayError = null
             }
         )
+
+        // NFC Payment & Scanning Popup
+        if (showNfcPopup) {
+            com.ryanshelby.spw.wallet.ui.components.NfcPaymentPopup(
+                invoice = activeNfcInvoice,
+                isScanning = isNfcScanning,
+                isBroadcasting = isNfcBroadcasting,
+                broadcastTxHash = nfcBroadcastTxHash,
+                broadcastError = nfcBroadcastError,
+                onDismiss = {
+                    showNfcPopup = false
+                    isNfcScanning = false
+                    activeNfcInvoice = null
+                    nfcBroadcastTxHash = null
+                    nfcBroadcastError = null
+                    isNfcBroadcasting = false
+                    onStopNfcScan()
+                    onClearNfcInvoice()
+                },
+                onConfirmPayment = { amt ->
+                    activeNfcInvoice?.let { inv ->
+                        val executeTransfer = {
+                            isNfcBroadcasting = true
+                            nfcBroadcastError = null
+                            scope.launch {
+                                val result = onConfirmSend(
+                                    inv.token ?: "SPW",
+                                    inv.address,
+                                    amt,
+                                    gasFeeSpw,
+                                    "NFC Payment",
+                                    false,
+                                    null
+                                )
+                                isNfcBroadcasting = false
+                                if (result.isSuccess) {
+                                    nfcBroadcastTxHash = result.getOrNull() ?: "Confirmed"
+                                    HapticUtil.performSuccess(context)
+                                } else {
+                                    nfcBroadcastError = result.exceptionOrNull()?.message ?: "Transfer failed"
+                                    HapticUtil.performError(context)
+                                }
+                            }
+                        }
+
+                        if (isNfcRequireAuth) {
+                            onTriggerBiometric {
+                                executeTransfer()
+                            }
+                        } else {
+                            executeTransfer()
+                        }
+                    }
+                }
+            )
+        }
     }
 }
 

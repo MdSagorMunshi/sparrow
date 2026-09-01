@@ -559,7 +559,7 @@ class SecurityManager(private val context: Context) {
     }
 
     fun isNfcRequireAuth(): Boolean {
-        return prefs.getBoolean(KEY_NFC_REQUIRE_AUTH, false)
+        return prefs.getBoolean(KEY_NFC_REQUIRE_AUTH, true)
     }
 
     fun setNfcRequireAuth(require: Boolean) {
