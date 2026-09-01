@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
@@ -720,7 +721,7 @@ fun HistoryScreen(
         }
     }
 
-    // ── Export CSV ModalBottomSheet ─────────────────────────────
+    // ── Export ModalBottomSheet (PDF Statement & CSV Ledger) ──
     if (showExportSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
@@ -733,71 +734,148 @@ fun HistoryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
+                    .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "EXPORT ACCOUNTING LEDGER",
-                        color = TextMuted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp
-                    )
+                    Column {
+                        Text(
+                            text = "FINANCIAL EXPORTS",
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp
+                        )
+                        Text(
+                            text = "Bank-grade PDF statements & CSV accounting",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
                     IconButton(onClick = { showExportSheet = false }, modifier = Modifier.size(28.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary, modifier = Modifier.size(18.dp))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // Option 1: Filtered Export
+                // ── SECTION 1: PDF STATEMENT ────────────────────
+                Text(
+                    text = "OFFICIAL ACCOUNT STATEMENT (PDF)",
+                    color = CyanNeon,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Filtered PDF
                 Button(
                     onClick = {
                         showExportSheet = false
-                        CsvExportUtil.exportAndShareCsv(context, filteredTransactions, label = "Filtered_${selectedTimeframe.id}")
+                        com.ryanshelby.spw.wallet.security.PdfStatementExportUtil.exportAndSharePdf(
+                            context = context,
+                            transactions = filteredTransactions,
+                            walletAddress = walletAddress,
+                            networkName = network.name,
+                            periodLabel = "Filtered (${selectedTimeframe.id})"
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ButtonPrimary, contentColor = ButtonPrimaryText),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Export Filtered View (${filteredTransactions.size} txs)",
+                        text = "Export Filtered Statement (${filteredTransactions.size} txs)",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Option 2: Full Ledger Export
-                OutlinedButton(
+                // Full PDF
+                Button(
                     onClick = {
                         showExportSheet = false
-                        CsvExportUtil.exportAndShareCsv(context, transactions, label = "Full_Ledger")
+                        com.ryanshelby.spw.wallet.security.PdfStatementExportUtil.exportAndSharePdf(
+                            context = context,
+                            transactions = transactions,
+                            walletAddress = walletAddress,
+                            networkName = network.name,
+                            periodLabel = "Full Ledger"
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceElevated, contentColor = TextPrimary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(17.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Export Full Ledger (${transactions.size} txs)",
+                        text = "Export Full Statement (${transactions.size} txs)",
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // ── SECTION 2: CSV SPREADSHEET ──────────────────
+                Text(
+                    text = "RAW SPREADSHEET (CSV)",
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            showExportSheet = false
+                            CsvExportUtil.exportAndShareCsv(context, filteredTransactions, label = "Filtered_${selectedTimeframe.id}")
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Filtered CSV", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            showExportSheet = false
+                            CsvExportUtil.exportAndShareCsv(context, transactions, label = "Full_Ledger")
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Full CSV", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
