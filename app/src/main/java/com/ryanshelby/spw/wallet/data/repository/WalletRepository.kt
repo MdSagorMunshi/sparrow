@@ -719,8 +719,8 @@ class WalletRepository(
         }
     }
 
-    suspend fun createNewAccount(name: String): SPWAccountKeys {
-        val keys = securityManager.generateNewWallet(name)
+    suspend fun createNewAccount(name: String, wordCount: Int = 12): SPWAccountKeys {
+        val keys = securityManager.generateNewWallet(name, wordCount)
         val entity = AccountEntity(
             id = UUID.randomUUID().toString(),
             name = name,

@@ -432,8 +432,9 @@ class SecurityManager(private val context: Context) {
         return account
     }
 
-    fun generateNewWallet(name: String = "New Account"): SPWAccountKeys {
-        val mnemonic = SPWCrypto.generateMnemonic(128)
+    fun generateNewWallet(name: String = "New Account", wordCount: Int = 12): SPWAccountKeys {
+        val entropyBits = if (wordCount == 24) 256 else 128
+        val mnemonic = SPWCrypto.generateMnemonic(entropyBits)
         return importMnemonic(mnemonic, name)
     }
 

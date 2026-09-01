@@ -346,6 +346,7 @@ fun ManageWalletsScreen(
     // ── DIALOG: CREATE NEW ACCOUNT ───────────────────────────────────────────
     if (showCreateDialog) {
         var newName by remember { mutableStateOf("Account ${accounts.size + 1}") }
+        var selectedWordCount by remember { mutableIntStateOf(12) }
         var isGenerating by remember { mutableStateOf(false) }
 
         Dialog(onDismissRequest = { if (!isGenerating) showCreateDialog = false }) {
@@ -394,6 +395,89 @@ fun ManageWalletsScreen(
                         )
                     )
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "RECOVERY PHRASE LENGTH",
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 12 Words Option
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (selectedWordCount == 12) CyanNeon.copy(alpha = 0.15f) else SurfacePrimary)
+                                .border(
+                                    1.2.dp,
+                                    if (selectedWordCount == 12) CyanNeon else BorderSubtle,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    HapticUtil.lightTap(context)
+                                    selectedWordCount = 12
+                                }
+                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "12 Words",
+                                    color = if (selectedWordCount == 12) CyanNeon else TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "128-bit Standard",
+                                    color = TextSecondary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        // 24 Words Option
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (selectedWordCount == 24) CyanNeon.copy(alpha = 0.15f) else SurfacePrimary)
+                                .border(
+                                    1.2.dp,
+                                    if (selectedWordCount == 24) CyanNeon else BorderSubtle,
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .clickable {
+                                    HapticUtil.lightTap(context)
+                                    selectedWordCount = 24
+                                }
+                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "24 Words",
+                                    color = if (selectedWordCount == 24) CyanNeon else TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "256-bit Maximum",
+                                    color = TextSecondary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(20.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -412,9 +496,9 @@ fun ManageWalletsScreen(
                                     isGenerating = true
                                     scope.launch {
                                         try {
-                                            val keys = repository.createNewAccount(newName.trim())
+                                            val keys = repository.createNewAccount(newName.trim(), selectedWordCount)
                                             HapticUtil.performSuccess(context)
-                                            Toast.makeText(context, "Account Created: ${keys.address.take(10)}...", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "$selectedWordCount-Word Account Created: ${keys.address.take(10)}...", Toast.LENGTH_SHORT).show()
                                             showCreateDialog = false
                                         } catch (e: Exception) {
                                             Toast.makeText(context, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
