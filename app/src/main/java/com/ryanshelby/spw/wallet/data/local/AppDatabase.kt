@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         TokenEntity::class,
         ContactEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

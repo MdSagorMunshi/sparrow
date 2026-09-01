@@ -568,12 +568,17 @@ fun ManageWalletsScreen(
                         Tab(
                             selected = importTab == 0,
                             onClick = { importTab = 0 },
-                            text = { Text("Recovery Phrase", fontSize = 12.sp, fontWeight = if (importTab == 0) FontWeight.Bold else FontWeight.Normal) }
+                            text = { Text("Phrase", fontSize = 11.sp, fontWeight = if (importTab == 0) FontWeight.Bold else FontWeight.Normal) }
                         )
                         Tab(
                             selected = importTab == 1,
                             onClick = { importTab = 1 },
-                            text = { Text("Private Key", fontSize = 12.sp, fontWeight = if (importTab == 1) FontWeight.Bold else FontWeight.Normal) }
+                            text = { Text("Private Key", fontSize = 11.sp, fontWeight = if (importTab == 1) FontWeight.Bold else FontWeight.Normal) }
+                        )
+                        Tab(
+                            selected = importTab == 2,
+                            onClick = { importTab = 2 },
+                            text = { Text("Watch-Only", fontSize = 11.sp, fontWeight = if (importTab == 2) FontWeight.Bold else FontWeight.Normal) }
                         )
                     }
 
@@ -630,7 +635,7 @@ fun ManageWalletsScreen(
                             fontSize = 11.sp,
                             modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                         )
-                    } else {
+                    } else if (importTab == 1) {
                         // Private Key Input
                         OutlinedTextField(
                             value = importSpendKey,
@@ -673,6 +678,56 @@ fun ManageWalletsScreen(
                                 unfocusedTextColor = TextPrimary
                             )
                         )
+                    } else {
+                        // Watch-Only (Cold Storage) Input
+                        OutlinedTextField(
+                            value = importSpendKey,
+                            onValueChange = { importSpendKey = it },
+                            label = { Text("SPW Public Address (Base58)", color = TextMuted) },
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(
+                                    onClick = {
+                                        val clip = clipboardManager.getText()?.text
+                                        if (!clip.isNullOrBlank()) {
+                                            importSpendKey = clip.trim()
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Default.ContentPaste, contentDescription = "Paste", tint = CyanNeon)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = CyanNeon,
+                                unfocusedBorderColor = BorderSubtle,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = importViewKey,
+                            onValueChange = { importViewKey = it },
+                            label = { Text("Stealth View Key (Optional)", color = TextMuted) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = CyanNeon,
+                                unfocusedBorderColor = BorderSubtle,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "🔒 Safe for tracking cold storage hardware vaults. Spend keys never touch this device.",
+                            color = CyanNeon,
+                            fontSize = 11.sp
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))
@@ -702,15 +757,28 @@ fun ManageWalletsScreen(
                                             } else {
                                                 Toast.makeText(context, "Error: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                             }
-                                        } else {
+                                        } else if (importTab == 1) {
                                             val res = repository.importAccountByPrivateKey(
                                                 spendKeyHex = importSpendKey.trim(),
-                                                viewKeyHex = importViewKey.trim().ifEmpty { null },
+                                                viewKeyHex = importViewKey.trim(),
                                                 name = importName.trim()
                                             )
                                             if (res.isSuccess) {
                                                 HapticUtil.performSuccess(context)
                                                 Toast.makeText(context, "Private Key Imported!", Toast.LENGTH_SHORT).show()
+                                                showImportDialog = false
+                                            } else {
+                                                Toast.makeText(context, "Error: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                                            }
+                                        } else {
+                                            val res = repository.importWatchOnlyAccount(
+                                                address = importSpendKey.trim(),
+                                                viewKeyHex = importViewKey.trim(),
+                                                name = importName.trim().ifEmpty { "Cold Vault" }
+                                            )
+                                            if (res.isSuccess) {
+                                                HapticUtil.performSuccess(context)
+                                                Toast.makeText(context, "Watch-Only Vault Added!", Toast.LENGTH_SHORT).show()
                                                 showImportDialog = false
                                             } else {
                                                 Toast.makeText(context, "Error: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
@@ -723,11 +791,12 @@ fun ManageWalletsScreen(
                             },
                             enabled = !isImporting && (
                                 (importTab == 0 && importMnemonic.isNotBlank()) ||
-                                (importTab == 1 && importSpendKey.isNotBlank())
+                                (importTab == 1 && importSpendKey.isNotBlank()) ||
+                                (importTab == 2 && importSpendKey.isNotBlank())
                             ),
                             colors = ButtonDefaults.buttonColors(containerColor = CyanNeon)
                         ) {
-                            Text("Import & Activate", color = DarkBackground, fontWeight = FontWeight.Bold)
+                            Text(if (importTab == 2) "Add Watch-Only" else "Import & Activate", color = DarkBackground, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1237,12 +1306,16 @@ private fun ActiveWalletCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(SurfaceSubtle)
+                        .background(if (account.isWatchOnly) AmberGold.copy(alpha = 0.15f) else SurfaceSubtle)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (account.mnemonic != null) "12-Word Mnemonic" else "Private Key Hex",
-                        color = TextSecondary,
+                        text = when {
+                            account.isWatchOnly -> "Watch-Only (Cold Storage)"
+                            account.mnemonic != null -> "12/24-Word Mnemonic"
+                            else -> "Private Key Hex"
+                        },
+                        color = if (account.isWatchOnly) AmberGold else TextSecondary,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -1318,6 +1391,17 @@ private fun WalletItemCard(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text("ACTIVE", color = SemanticPositive, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (account.isWatchOnly) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(AmberGold.copy(alpha = 0.15f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text("COLD VAULT", color = AmberGold, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

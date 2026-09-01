@@ -68,6 +68,18 @@
                 android:name="android.nfc.cardemulation.host_apdu_service"
                 android:resource="@xml/apdu_service" />
         </service>
+
+        <receiver
+            android:name=".ui.widget.SpwWalletAppWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.ryanshelby.spw.wallet.REFRESH_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/spw_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

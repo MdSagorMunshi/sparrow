@@ -528,7 +528,7 @@ class MainActivity : FragmentActivity() {
                                     activeLanguage = activeLanguage,
                                     walletAddress = securityManager.getWalletAddress(),
                                     onBack = { navController.popBackStack() },
-                                    onConfirmSend = { tokenSymbol, toAddress, amount, gasFee, memo, isStealth, recipientViewPubHex ->
+                                    onConfirmSend = { tokenSymbol, toAddress, amount, gasFee, memo, isStealth, recipientViewPubHex, customUtxos ->
                                         repository.sendTransfer(
                                             tokenSymbol = tokenSymbol,
                                             toAddress = toAddress,
@@ -536,7 +536,8 @@ class MainActivity : FragmentActivity() {
                                             gasFee = gasFee,
                                             memo = memo,
                                             isStealth = isStealth,
-                                            recipientViewPubHex = recipientViewPubHex
+                                            recipientViewPubHex = recipientViewPubHex,
+                                            customUtxos = customUtxos
                                         )
                                     },
                                     onVerifyPin = { pin ->
@@ -579,6 +580,9 @@ class MainActivity : FragmentActivity() {
                                     onBack = { navController.popBackStack() },
                                     onNavigateToRequestPayment = {
                                         navController.navigate("request_payment")
+                                    },
+                                    onNavigateToBurnerInvoice = {
+                                        navController.navigate("burner_invoice")
                                     }
                                 )
                             }
@@ -587,6 +591,12 @@ class MainActivity : FragmentActivity() {
                                 com.ryanshelby.spw.wallet.ui.screens.RequestPaymentScreen(
                                     securityManager = securityManager,
                                     transactionWatcher = transactionWatcher,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable("burner_invoice") {
+                                com.ryanshelby.spw.wallet.ui.screens.DisposableBurnerScreen(
                                     onBack = { navController.popBackStack() }
                                 )
                             }

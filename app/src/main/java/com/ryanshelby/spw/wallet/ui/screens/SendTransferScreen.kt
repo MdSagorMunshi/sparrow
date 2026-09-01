@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Speed
@@ -50,6 +51,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -74,9 +76,11 @@ import com.ryanshelby.spw.wallet.data.model.AppLanguage
 import com.ryanshelby.spw.wallet.data.model.CryptoAsset
 import com.ryanshelby.spw.wallet.data.model.NetworkConfig
 import com.ryanshelby.spw.wallet.data.model.TranslationHelper
+import com.ryanshelby.spw.wallet.data.remote.SpwUtxo
 import com.ryanshelby.spw.wallet.security.HapticUtil
 import com.ryanshelby.spw.wallet.security.QrUriParser
 import com.ryanshelby.spw.wallet.security.SPWCrypto
+import com.ryanshelby.spw.wallet.ui.components.CoinControlBottomSheet
 import com.ryanshelby.spw.wallet.ui.components.FinanceCard
 import com.ryanshelby.spw.wallet.ui.components.Identicon
 import com.ryanshelby.spw.wallet.ui.components.PinPadView
@@ -85,6 +89,7 @@ import com.ryanshelby.spw.wallet.ui.components.TransactionStatusOverlay
 import com.ryanshelby.spw.wallet.ui.components.TxOverlayState
 import com.ryanshelby.spw.wallet.ui.theme.AccentMuted
 import com.ryanshelby.spw.wallet.ui.theme.AccentPrimary
+import com.ryanshelby.spw.wallet.ui.theme.AmberGold
 import com.ryanshelby.spw.wallet.ui.theme.BorderStrong
 import com.ryanshelby.spw.wallet.ui.theme.BorderSubtle
 import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimary
@@ -115,7 +120,7 @@ fun SendTransferScreen(
     activeLanguage: AppLanguage,
     walletAddress: String = "",
     onBack: () -> Unit,
-    onConfirmSend: suspend (tokenSymbol: String, toAddress: String, amount: Double, gasFee: Double, memo: String, isStealth: Boolean, recipientViewPubHex: String?) -> Result<String>,
+    onConfirmSend: suspend (tokenSymbol: String, toAddress: String, amount: Double, gasFee: Double, memo: String, isStealth: Boolean, recipientViewPubHex: String?, customUtxos: List<SpwUtxo>?) -> Result<String>,
     onVerifyPin: (String) -> Boolean,
     onTriggerBiometric: (onSuccess: () -> Unit) -> Unit,
     isNfcSupported: Boolean = false,
@@ -133,8 +138,16 @@ fun SendTransferScreen(
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val strings = remember(activeLanguage) { TranslationHelper.getStrings(activeLanguage) }
-
     val nativeToken = remember(tokens) { tokens.firstOrNull { it.isNative } ?: CryptoAsset() }
+
+    val repository = remember { com.ryanshelby.spw.wallet.SPWApplication.instance.walletRepository }
+    val accounts by repository.accountsFlow.collectAsState(initial = emptyList())
+    val activeAccount = accounts.find { it.isPrimary } ?: accounts.firstOrNull()
+    val isWatchOnly = activeAccount?.isWatchOnly == true
+    val liveUtxos by repository.liveUtxos.collectAsState()
+
+    var showCoinControlSheet by remember { mutableStateOf(false) }
+    var customSelectedUtxos by remember { mutableStateOf<List<SpwUtxo>?>(null) }
 
     var recipientAddress by remember { mutableStateOf(initialRecipientAddress ?: "") }
     var recipientViewPub by remember { mutableStateOf("") }
@@ -630,7 +643,32 @@ fun SendTransferScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            // Watch-Only Security Banner
+            if (isWatchOnly) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AmberGold.copy(alpha = 0.15f))
+                        .border(1.dp, AmberGold, RoundedCornerShape(12.dp))
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = AmberGold, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text("WATCH-ONLY COLD STORAGE VAULT", color = AmberGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Private spend keys are stored in cold storage. Outgoing transactions cannot be signed on this device.",
+                                color = TextPrimary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
 
             // Amount Input
             Text(
@@ -682,6 +720,64 @@ fun SendTransferScreen(
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace
                 )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ═════════════════════════════════════════════════════════════════
+            // COIN CONTROL (UTXO MANAGEMENT) CARD
+            // ═════════════════════════════════════════════════════════════════
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfacePrimary)
+                    .border(1.dp, if (customSelectedUtxos != null) CyanNeon.copy(alpha = 0.6f) else BorderSubtle, RoundedCornerShape(12.dp))
+                    .clickable { showCoinControlSheet = true }
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (customSelectedUtxos != null) CyanNeon.copy(alpha = 0.2f) else SurfaceSubtle),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = null,
+                                tint = if (customSelectedUtxos != null) CyanNeon else TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text("Coin Control (UTXO Selection)", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (customSelectedUtxos == null) {
+                                    "Auto-select inputs (${liveUtxos.size} available)"
+                                } else {
+                                    "${customSelectedUtxos!!.size} UTXOs selected (${String.format(Locale.US, "%.4f", customSelectedUtxos!!.sumOf { it.amount }.toDouble() / 1e8)} SPW)"
+                                },
+                                color = if (customSelectedUtxos == null) TextMuted else CyanNeon,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = if (customSelectedUtxos == null) "Customize" else "Edit",
+                        color = CyanNeon,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -907,7 +1003,7 @@ fun SendTransferScreen(
 
             // Confirm Send Button
             val isAmountValid = amountValue > 0 && !isOverBalance
-            val isBtnEnabled = isAddressValid && isAmountValid && txOverlayState == TxOverlayState.HIDDEN
+            val isBtnEnabled = !isWatchOnly && isAddressValid && isAmountValid && txOverlayState == TxOverlayState.HIDDEN
             Button(
                 onClick = {
                     HapticUtil.lightTap(context)
@@ -921,6 +1017,7 @@ fun SendTransferScreen(
                             memo = memoText,
                             isStealth = isStealthTransfer,
                             recipientViewPubHex = recipientViewPub.ifBlank { null },
+                            customUtxos = customSelectedUtxos,
                             scope = scope,
                             onStart = { txOverlayState = TxOverlayState.BROADCASTING; overlayError = null },
                             onSuccess = { txid ->
@@ -1043,6 +1140,7 @@ fun SendTransferScreen(
                                                 memo = memoText,
                                                 isStealth = isStealthTransfer,
                                                 recipientViewPubHex = recipientViewPub.ifBlank { null },
+                                                customUtxos = customSelectedUtxos,
                                                 scope = scope,
                                                 onStart = { txOverlayState = TxOverlayState.BROADCASTING; overlayError = null },
                                                 onSuccess = { txid ->
@@ -1075,6 +1173,7 @@ fun SendTransferScreen(
                                         memo = memoText,
                                         isStealth = isStealthTransfer,
                                         recipientViewPubHex = recipientViewPub.ifBlank { null },
+                                        customUtxos = customSelectedUtxos,
                                         scope = scope,
                                         onStart = { txOverlayState = TxOverlayState.BROADCASTING; overlayError = null },
                                         onSuccess = { txid ->
@@ -1122,9 +1221,6 @@ fun SendTransferScreen(
                 onDismiss = {
                     showNfcPopup = false
                     isNfcScanning = false
-                    activeNfcInvoice = null
-                    nfcBroadcastTxHash = null
-                    nfcBroadcastError = null
                     isNfcBroadcasting = false
                     onStopNfcScan()
                     onClearNfcInvoice()
@@ -1142,7 +1238,8 @@ fun SendTransferScreen(
                                     gasFeeSpw,
                                     "NFC Payment",
                                     false,
-                                    null
+                                    null,
+                                    customSelectedUtxos
                                 )
                                 isNfcBroadcasting = false
                                 if (result.isSuccess) {
@@ -1166,17 +1263,32 @@ fun SendTransferScreen(
                 }
             )
         }
+
+        // Coin Control Bottom Sheet
+        if (showCoinControlSheet) {
+            val neededFeathers = ((amountValue + gasFeeSpw) * 100_000_000.0).toLong()
+            CoinControlBottomSheet(
+                allUtxos = liveUtxos,
+                initiallySelected = customSelectedUtxos,
+                requiredFeathers = neededFeathers,
+                onApplySelection = { selected ->
+                    customSelectedUtxos = selected
+                },
+                onDismiss = { showCoinControlSheet = false }
+            )
+        }
     }
 }
 
 private fun executeBroadcast(
-    onConfirmSend: suspend (String, String, Double, Double, String, Boolean, String?) -> Result<String>,
+    onConfirmSend: suspend (String, String, Double, Double, String, Boolean, String?, List<SpwUtxo>?) -> Result<String>,
     toAddress: String,
     amount: Double,
     gasFee: Double,
     memo: String,
     isStealth: Boolean,
     recipientViewPubHex: String?,
+    customUtxos: List<SpwUtxo>?,
     scope: kotlinx.coroutines.CoroutineScope,
     onStart: () -> Unit,
     onSuccess: (String) -> Unit,
@@ -1184,7 +1296,7 @@ private fun executeBroadcast(
 ) {
     scope.launch {
         onStart()
-        val result = onConfirmSend("SPW", toAddress, amount, gasFee, memo, isStealth, recipientViewPubHex)
+        val result = onConfirmSend("SPW", toAddress, amount, gasFee, memo, isStealth, recipientViewPubHex, customUtxos)
         if (result.isSuccess) {
             onSuccess(result.getOrNull() ?: "")
         } else {

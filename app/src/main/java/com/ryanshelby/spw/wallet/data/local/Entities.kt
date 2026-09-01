@@ -14,6 +14,7 @@ data class AccountEntity(
     val viewPubHex: String,
     val mnemonic: String?,
     val isPrimary: Boolean = false,
+    val isWatchOnly: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
 

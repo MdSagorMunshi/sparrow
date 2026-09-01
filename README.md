@@ -24,6 +24,12 @@
 Sparrow provides an institutional-grade, privacy-preserving mobile wallet and decentralized node consensus engine for the SPW Network:
 
 *   **⛏️ Real Native RandomX C++ Node Mining**: Fully embedded RandomX PoW engine compiled in C++ via NDK with ARM64/x86_64 JIT support, dynamic epoch key rotation (`SPW-v1-epoch-{height // 2048}`), and duty-cycle CPU throttling (10% to 100%).
+*   **🧅 Tor & SOCKS5 Proxy Onion Routing**: Built-in network proxy layer routing RPC and mempool traffic over Tor (Orbot 127.0.0.1:9050 preset) or custom authenticated SOCKS5/HTTP proxies with live connectivity testing.
+*   **🧊 Watch-Only (Cold Storage) Wallets**: Monitor air-gapped hardware cold storage addresses without private keys. Displays live balances and unspent outputs with spend-locking safeguards.
+*   **🎛️ Coin Control & UTXO Management**: Fine-grained input selection bottom sheet with live unspent output listing, stealth output tagging, and Greedy Largest/Smallest fee optimization heuristics.
+*   **🔥 Disposable Burner Invoices**: Generate ephemeral stealth payment requests with live countdown expiration timers, QR codes, and real-time on-chain settlement watchers.
+*   **📱 Android Home Screen Glance AppWidget**: Real-time home screen widget displaying live portfolio balance, quick send shortcuts, and 1-tap mobile node mining toggles.
+*   **📳 Background Notifications & Balance Alerts**: Push notification engine alerting on incoming transactions, outgoing broadcasts, and mined block coinbase rewards.
 *   **💼 Multi-Wallet & Account Management**: Dedicated wallet hub with 1-tap account switching, custom labels, 12 vs 24-word BIP-39 mnemonic creation, multi-tab imports, and PIN/Biometrics-guarded safe deletion.
 *   **📄 Bank-Grade PDF & CSV Financial Statements**: Generate and export publication-ready financial statements and CSV accounting ledgers with custom date ranges, year filters, and transaction type breakdowns.
 *   **🕵️ Dual-Key ECDSA/ECDH Stealth Transfers**: Cryptographic one-time address shielding for total privacy. Send funds to private recipient stealth addresses without revealing identity on-chain.

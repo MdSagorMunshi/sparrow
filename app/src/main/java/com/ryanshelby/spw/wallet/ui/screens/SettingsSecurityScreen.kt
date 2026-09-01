@@ -21,7 +21,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
+import com.ryanshelby.spw.wallet.data.model.ProxyConfig
+import com.ryanshelby.spw.wallet.data.model.ProxyType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -70,6 +74,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -202,6 +207,11 @@ fun SettingsSecurityScreen(
     var showClearPinDialog by remember { mutableStateOf(false) }
     var enteredClearPin by remember { mutableStateOf("") }
     var clearPinError by remember { mutableStateOf<String?>(null) }
+
+    // Tor / Proxy State
+    val proxyPrefs = remember { com.ryanshelby.spw.wallet.data.model.ProxyPreferences(context) }
+    val proxyConfig by proxyPrefs.proxyConfigFlow.collectAsState(initial = com.ryanshelby.spw.wallet.data.model.ProxyConfig())
+    var showProxyModal by remember { mutableStateOf(false) }
 
     // Authentication Guard State for Seed/Key Decryption
     var showAuthPinDialog by remember { mutableStateOf(false) }
@@ -635,6 +645,65 @@ fun SettingsSecurityScreen(
                         }
                     }
                     Text("Switch", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Tor & SOCKS5 Proxy Card
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        HapticUtil.performKeyClick(context)
+                        showProxyModal = true
+                    }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Security,
+                            contentDescription = null,
+                            tint = if (proxyConfig.enabled) PurpleNeon else TextMuted,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Tor / SOCKS5 Proxy Routing", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                if (proxyConfig.enabled) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(PurpleNeon.copy(alpha = 0.2f))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text("ACTIVE", color = PurpleNeon, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            Text(
+                                text = if (proxyConfig.enabled) {
+                                    when (proxyConfig.type) {
+                                        ProxyType.TOR_ORBOT -> "Tor Onion Routing (${proxyConfig.host}:${proxyConfig.port})"
+                                        ProxyType.SOCKS5 -> "SOCKS5 (${proxyConfig.host}:${proxyConfig.port})"
+                                        ProxyType.HTTP -> "HTTP Proxy (${proxyConfig.host}:${proxyConfig.port})"
+                                        else -> "Direct Connection"
+                                    }
+                                } else "Direct Connection (No Proxy)",
+                                color = if (proxyConfig.enabled) PurpleNeon else TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    Text("Configure", color = CyanNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -2246,6 +2315,203 @@ fun SettingsSecurityScreen(
             }
         }
 
+        // TOR & PROXY MODAL
+        if (showProxyModal) {
+            var proxyEnabled by remember { mutableStateOf(proxyConfig.enabled) }
+            var proxyType by remember { mutableStateOf(proxyConfig.type) }
+            var hostInput by remember { mutableStateOf(proxyConfig.host) }
+            var portInput by remember { mutableStateOf(proxyConfig.port.toString()) }
+            var isTestingPing by remember { mutableStateOf(false) }
+            var pingResult by remember { mutableStateOf<String?>(null) }
+
+            Dialog(onDismissRequest = { showProxyModal = false }) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Tor / Proxy Routing", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                Text("Route RPC traffic over Onion / SOCKS5", color = TextSecondary, fontSize = 11.sp)
+                            }
+                            Switch(
+                                checked = proxyEnabled,
+                                onCheckedChange = { proxyEnabled = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = DarkBackground,
+                                    checkedTrackColor = PurpleNeon
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        if (proxyEnabled) {
+                            Text("PROXY TYPE PRESETS", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val presets = listOf(
+                                    Pair(ProxyType.TOR_ORBOT, "Tor / Orbot"),
+                                    Pair(ProxyType.SOCKS5, "SOCKS5"),
+                                    Pair(ProxyType.HTTP, "HTTP")
+                                )
+                                presets.forEach { (type, label) ->
+                                    val isSelected = proxyType == type
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) PurpleNeon.copy(alpha = 0.2f) else DarkSurfaceElevated)
+                                            .border(1.dp, if (isSelected) PurpleNeon else GlassCardBorder, RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                HapticUtil.performKeyClick(context)
+                                                proxyType = type
+                                                if (type == ProxyType.TOR_ORBOT) {
+                                                    hostInput = "127.0.0.1"
+                                                    portInput = "9050"
+                                                }
+                                            }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (isSelected) PurpleNeon else TextSecondary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            OutlinedTextField(
+                                value = hostInput,
+                                onValueChange = { hostInput = it },
+                                label = { Text("Proxy Host / IP", color = TextMuted) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = PurpleNeon,
+                                    unfocusedBorderColor = BorderSubtle,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = portInput,
+                                onValueChange = { input -> portInput = input.filter { it.isDigit() } },
+                                label = { Text("Port (e.g. 9050 for Tor)", color = TextMuted) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = PurpleNeon,
+                                    unfocusedBorderColor = BorderSubtle,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                )
+                            )
+
+                            if (pingResult != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = pingResult!!,
+                                    color = if (pingResult!!.contains("Success") || pingResult!!.contains("✓")) SemanticPositive else RedCoral,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        isTestingPing = true
+                                        pingResult = "Pinging node over proxy..."
+                                        scope.launch {
+                                            try {
+                                                val port = portInput.toIntOrNull() ?: 9050
+                                                val testConfig = ProxyConfig(
+                                                    enabled = true,
+                                                    type = proxyType,
+                                                    host = hostInput.trim(),
+                                                    port = port
+                                                )
+                                                proxyPrefs.saveProxyConfig(testConfig)
+                                                val res = com.ryanshelby.spw.wallet.SPWApplication.instance.walletRepository.apiClient.fetchChainInfo()
+                                                if (res.isSuccess) {
+                                                    pingResult = "✓ Proxy Connected! Block #${res.getOrNull()?.height ?: 0L}"
+                                                } else {
+                                                    pingResult = "✗ Connection failed: ${res.exceptionOrNull()?.message}"
+                                                }
+                                            } catch (e: Exception) {
+                                                pingResult = "✗ Error: ${e.message}"
+                                            } finally {
+                                                isTestingPing = false
+                                            }
+                                        }
+                                    },
+                                    enabled = !isTestingPing
+                                ) {
+                                    Text(if (isTestingPing) "Testing..." else "Test Connection", color = PurpleNeon, fontSize = 12.sp)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { showProxyModal = false }) {
+                                Text("Cancel", color = TextSecondary)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val port = portInput.toIntOrNull() ?: 9050
+                                    val newConfig = ProxyConfig(
+                                        enabled = proxyEnabled,
+                                        type = if (proxyEnabled) proxyType else ProxyType.NONE,
+                                        host = hostInput.trim(),
+                                        port = port
+                                    )
+                                    scope.launch {
+                                        proxyPrefs.saveProxyConfig(newConfig)
+                                        HapticUtil.performSuccess(context)
+                                        Toast.makeText(context, "Proxy Settings Saved", Toast.LENGTH_SHORT).show()
+                                        showProxyModal = false
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = PurpleNeon)
+                            ) {
+                                Text("Save & Apply", color = DarkBackground, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+        }
+
         // 9. ADD CONTACT MODAL
         if (showNotificationsModal) {
             Dialog(onDismissRequest = { showNotificationsModal = false }) {
@@ -2485,6 +2751,7 @@ fun SettingsSecurityScreen(
             }
         }
     }
+}
 }
 
 @Composable

@@ -67,6 +67,7 @@ import com.ryanshelby.spw.wallet.ui.theme.ButtonPrimaryText
 import com.ryanshelby.spw.wallet.ui.theme.DarkBackground
 import com.ryanshelby.spw.wallet.ui.theme.CyanNeon
 import com.ryanshelby.spw.wallet.ui.theme.FinanceBackground
+import com.ryanshelby.spw.wallet.ui.theme.RedCoral
 import com.ryanshelby.spw.wallet.ui.theme.SemanticPositive
 import com.ryanshelby.spw.wallet.ui.theme.SurfaceElevated
 import com.ryanshelby.spw.wallet.ui.theme.SurfacePrimary
@@ -90,7 +91,8 @@ fun ReceiveScreen(
     onBack: () -> Unit,
     isNfcSupported: Boolean = false,
     isNfcEnabled: Boolean = false,
-    onNavigateToRequestPayment: () -> Unit = {}
+    onNavigateToRequestPayment: () -> Unit = {},
+    onNavigateToBurnerInvoice: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
@@ -567,6 +569,19 @@ fun ReceiveScreen(
                         unfocusedTextColor = TextPrimary
                     )
                 )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Button(
+                    onClick = onNavigateToBurnerInvoice,
+                    colors = ButtonDefaults.buttonColors(containerColor = RedCoral.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().height(42.dp)
+                ) {
+                    Icon(Icons.Default.Shield, contentDescription = null, tint = RedCoral, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Create Single-Use Burner Invoice", color = RedCoral, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
 

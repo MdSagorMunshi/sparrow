@@ -146,14 +146,41 @@ data class SpwBlockSubmitResponse(
 open class SPWApiClient(
     private var baseUrl: String = SPWCrypto.DEFAULT_NODE_URL
 ) {
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .writeTimeout(10, TimeUnit.SECONDS)
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.HEADERS
-        })
-        .build()
+    private var proxyConfig: com.ryanshelby.spw.wallet.data.model.ProxyConfig = com.ryanshelby.spw.wallet.data.model.ProxyConfig()
+
+    @Volatile
+    private var client: OkHttpClient = buildClient()
+
+    private fun buildClient(): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.HEADERS
+            })
+
+        val javaProxy = proxyConfig.toJavaProxy()
+        if (javaProxy != java.net.Proxy.NO_PROXY) {
+            builder.proxy(javaProxy)
+            if (proxyConfig.username.isNotBlank() && proxyConfig.password.isNotBlank()) {
+                builder.proxyAuthenticator { _, response ->
+                    val credential = okhttp3.Credentials.basic(proxyConfig.username, proxyConfig.password)
+                    response.request.newBuilder()
+                        .header("Proxy-Authorization", credential)
+                        .build()
+                }
+            }
+        }
+        return builder.build()
+    }
+
+    fun setProxyConfig(config: com.ryanshelby.spw.wallet.data.model.ProxyConfig) {
+        this.proxyConfig = config
+        this.client = buildClient()
+    }
+
+    fun getProxyConfig(): com.ryanshelby.spw.wallet.data.model.ProxyConfig = proxyConfig
 
     private val moshi: Moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())

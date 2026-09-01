@@ -1,5 +1,28 @@
 # SPARROW Mobile Wallet - Features History
 
+### v2.5.0 (2026-09-02)
+- **🧅 Tor & SOCKS5 Proxy Onion Routing**:
+  - Full network anonymity layer routing all SPW RPC and mempool communication through Tor or custom SOCKS5/HTTP proxies.
+  - Orbot preset (`127.0.0.1:9050`) for 1-tap Tor routing.
+  - Proxy configuration modal in Settings with live node connection ping test.
+- **🧊 Watch-Only (Cold Storage) Wallets**:
+  - Track cold storage vaults, hardware wallets, and air-gapped accounts with zero private key risk.
+  - Safe import via Base58 address and optional stealth view key.
+  - Distinct `COLD VAULT` visual badges and automatic spend-locking safeguards preventing unauthorized outgoing transfers.
+- **🎛️ Coin Control & UTXO Management**:
+  - Interactive `CoinControlBottomSheet` allowing manual selection of unspent transaction outputs.
+  - Displays UTXO block height, outpoint, feather amounts, and `STEALTH` privacy badges.
+  - Optimization presets: *Select All*, *Largest First* (greedy input selection), and *Auto Mode*.
+- **🔥 Disposable Burner Invoices**:
+  - Single-use ephemeral stealth payment generator with dedicated QR code view.
+  - Configurable expiration timer (15 Mins, 1 Hour, 24 Hours) with real-time countdown ticker.
+  - Active blockchain watcher polling node for settlement and presenting instant celebratory confirmation upon receipt.
+- **📱 Android Home Screen Glance AppWidget**:
+  - Glanceable home screen widget showing live portfolio balance and node status badge.
+  - Quick Send shortcut and 1-tap mobile node mining trigger.
+- **📳 Background Notifications & Balance Alerts**:
+  - Push notification channels for incoming transfers, broadcasted outgoing spends, and successfully mined block Coinbase rewards.
+
 ### v2.4.0 (2026-09-02)
 - **Dedicated Multi-Wallet & Account Management Hub (`ManageWalletsScreen`)**:
   - Independent sub-account derivation and management with custom wallet nicknames.

@@ -137,4 +137,35 @@ class PushNotificationService(private val context: Context) {
         }
     }
 
+    fun showMiningBlockRewardNotification(blockHeight: Long, rewardSpw: Double) {
+        if (!prefs.miningRewardsEnabled) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID_TRANSFERS)
+            .setSmallIcon(android.R.drawable.stat_notify_more)
+            .setContentTitle("⛏️ Block Mined Successfully!")
+            .setContentText("Found Block #$blockHeight: +$rewardSpw SPW Coinbase reward credited")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("🎉 Congratulations! Your SPW mobile node miner found and validated Block #$blockHeight. Coinbase reward of +$rewardSpw SPW deposited.")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
+        try {
+            NotificationManagerCompat.from(context).notify(notificationIdCounter++, builder.build())
+        } catch (_: SecurityException) {
+            // Permission not yet granted on Android 13+
+        }
+    }
 }

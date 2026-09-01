@@ -122,7 +122,14 @@ class WalletRepository(
 
     val contactsFlow: Flow<List<ContactEntity>> = walletDao.getAllContacts()
 
+    val proxyPreferences = com.ryanshelby.spw.wallet.data.model.ProxyPreferences(context)
+
     init {
+        repositoryScope.launch {
+            proxyPreferences.proxyConfigFlow.collect { config ->
+                apiClient.setProxyConfig(config)
+            }
+        }
         repositoryScope.launch {
             if (securityManager.hasWallet()) {
                 initWalletState()
@@ -540,8 +547,14 @@ class WalletRepository(
         gasFee: Double = 0.0001,
         memo: String = "",
         isStealth: Boolean = false,
-        recipientViewPubHex: String? = null
+        recipientViewPubHex: String? = null,
+        customUtxos: List<SpwUtxo>? = null
     ): Result<String> {
+        val activeAcc = walletDao.getAllAccountsSync().find { it.isPrimary }
+        if (activeAcc?.isWatchOnly == true) {
+            return Result.failure(Exception("Cannot sign transactions with a Watch-Only / Cold Storage account. Private spend keys are not present on this device."))
+        }
+
         val myAddress = securityManager.getWalletAddress()
         val spendKeyHex = securityManager.getSpendKeyHex()
         val spendPubHex = securityManager.getSpendPubHex()
@@ -565,14 +578,20 @@ class WalletRepository(
             utxoResult.getOrNull() ?: emptyList()
         }
 
-        var selectedTotal = 0L
-        val selectedUtxos = mutableListOf<SpwUtxo>()
-
-        for (u in availableUtxos) {
-            selectedUtxos.add(u)
-            selectedTotal += u.amount
-            if (selectedTotal >= neededFeathers) break
+        val selectedUtxos = if (!customUtxos.isNullOrEmpty()) {
+            customUtxos.toMutableList()
+        } else {
+            val result = mutableListOf<SpwUtxo>()
+            var accTotal = 0L
+            for (u in availableUtxos) {
+                result.add(u)
+                accTotal += u.amount
+                if (accTotal >= neededFeathers) break
+            }
+            result
         }
+
+        val selectedTotal = selectedUtxos.sumOf { it.amount }
 
         if (selectedTotal < neededFeathers) {
             return Result.failure(Exception("Insufficient balance. Need ${(neededFeathers.toDouble() / 1e8)} SPW, available: ${(selectedTotal.toDouble() / 1e8)} SPW"))
@@ -763,7 +782,7 @@ class WalletRepository(
 
     suspend fun importAccountByPrivateKey(spendKeyHex: String, viewKeyHex: String? = null, name: String): Result<SPWAccountKeys> {
         return try {
-            val keys = securityManager.importPrivateKey(spendKeyHex, viewKeyHex, name)
+            val keys = securityManager.importPrivateKey(spendKeyHex, viewKeyHex ?: "", name)
             val entity = AccountEntity(
                 id = UUID.randomUUID().toString(),
                 name = name,
@@ -773,11 +792,41 @@ class WalletRepository(
                 spendPubHex = keys.spendPubHex,
                 viewPubHex = keys.viewPubHex,
                 mnemonic = null,
-                isPrimary = true
+                isPrimary = false,
+                isWatchOnly = false
             )
             walletDao.insertAccount(entity)
-            switchActiveAccount(entity)
             Result.success(keys)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun importWatchOnlyAccount(
+        address: String,
+        viewKeyHex: String = "",
+        name: String = "Cold Vault"
+    ): Result<AccountEntity> {
+        return try {
+            val cleanAddr = address.trim()
+            if (!SPWCrypto.isValidSpwAddress(cleanAddr)) {
+                return Result.failure(Exception("Invalid SPW wallet address"))
+            }
+            val entity = AccountEntity(
+                id = UUID.randomUUID().toString(),
+                name = name.trim().ifEmpty { "Cold Vault" },
+                address = cleanAddr,
+                spendKeyHex = "",
+                viewKeyHex = viewKeyHex.trim(),
+                spendPubHex = "",
+                viewPubHex = "",
+                mnemonic = null,
+                isPrimary = false,
+                isWatchOnly = true
+            )
+            walletDao.insertAccount(entity)
+            refreshOnChainData()
+            Result.success(entity)
         } catch (e: Exception) {
             Result.failure(e)
         }
