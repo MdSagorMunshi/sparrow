@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -156,6 +157,7 @@ fun SettingsSecurityScreen(
     },
     onNavigateToAbout: () -> Unit = {},
     onNavigateToNfcSettings: () -> Unit = {},
+    onNavigateToExportStatements: () -> Unit = {},
     onBack: () -> Unit,
     onSetBiometricEnabled: (Boolean) -> Unit,
     onSetScramblePin: (Boolean) -> Unit,
@@ -724,6 +726,41 @@ fun SettingsSecurityScreen(
                         }
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SECTION: FINANCIAL EXPORTS & STATEMENTS
+            SectionHeader(title = "FINANCIAL EXPORTS & STATEMENTS")
+
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        HapticUtil.performKeyClick(context)
+                        onNavigateToExportStatements()
+                    }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Export Statements & Ledgers", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("Bank-grade PDF statements & CSV accounting with custom filters", color = TextSecondary, fontSize = 11.sp)
+                        }
+                    }
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
                 }
             }
 

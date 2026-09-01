@@ -630,6 +630,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onNavigateToAbout = { navController.navigate("about") },
                                     onNavigateToNfcSettings = { navController.navigate("nfc_settings") },
+                                    onNavigateToExportStatements = { navController.navigate("export_statements") },
                                     onBack = { navController.popBackStack() },
                                     onSetBiometricEnabled = { enabled ->
                                         isBiometricEnabled = enabled
@@ -709,6 +710,17 @@ class MainActivity : FragmentActivity() {
                                     },
                                     tagWriteSuccessEvent = tagWriteSuccessTimestamp,
                                     tagWriteErrorEvent = tagWriteErrorMessage,
+                                    onBack = { navController.popBackStack() }
+                                )
+                            }
+
+                            // Dedicated Export & Statements Screen
+                            composable("export_statements") {
+                                com.ryanshelby.spw.wallet.ui.screens.ExportStatementsScreen(
+                                    transactions = transactions,
+                                    walletAddress = securityManager.getWalletAddress(),
+                                    network = activeNetwork,
+                                    activeLanguage = activeLanguage,
                                     onBack = { navController.popBackStack() }
                                 )
                             }
